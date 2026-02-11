@@ -1,6 +1,6 @@
 {
   "name": "obsidian-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Expose Obsidian to AI Agents via Model Context Protocol (MCP)",
   "main": "main.js",
   "scripts": {
