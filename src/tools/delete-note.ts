@@ -5,13 +5,13 @@ import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import { ACCESS_DENIED_MSG } from './constants';
 
-export function registerReadNote(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
-    mcp.registerTool('read_note', {
-        description: 'Read a note by path.',
+export function registerDeleteNote(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
+    mcp.registerTool('delete_note', {
+        description: 'Delete a note by path.',
         inputSchema: {
-            path: z.string().describe("Vault-relative path (e.g. 'Notes/Meeting.md')"),
+            path: z.string().describe("Vault-relative path of the note to delete (e.g. 'Notes/OldNote.md')"),
         },
-    }, tracker.track('read_note', async ({ path }) => {
+    }, tracker.track('delete_note', async ({ path }) => {
         if (!plugin.security.isAllowed(path)) {
             return { content: [{ type: 'text', text: ACCESS_DENIED_MSG }], isError: true };
         }
@@ -22,7 +22,7 @@ export function registerReadNote(mcp: McpServer, plugin: McpPlugin, tracker: Sta
         if (!plugin.security.isAllowed(file)) {
             return { content: [{ type: 'text', text: ACCESS_DENIED_MSG }], isError: true };
         }
-        const content = await plugin.app.vault.read(file);
-        return { content: [{ type: 'text', text: content }] };
+        await plugin.app.vault.delete(file);
+        return { content: [{ type: 'text', text: `Deleted ${path}` }] };
     }));
 }

@@ -1,2 +1,31 @@
 /* Obsidian MCP Server Styles */
-/* Currently empty */
+
+.mcp-stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 16px;
+}
+
+.mcp-stats-table th,
+.mcp-stats-table td {
+    padding: 6px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.mcp-stats-table th {
+    font-weight: var(--font-weight-bold, 600);
+    color: var(--text-muted);
+    font-size: var(--font-smaller);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mcp-stats-table tbody tr:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.mcp-stats-empty {
+    color: var(--text-muted);
+    font-style: italic;
+}

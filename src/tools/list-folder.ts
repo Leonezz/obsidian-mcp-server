@@ -2,16 +2,17 @@ import { TFolder } from 'obsidian';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type McpPlugin from '../main';
+import type { StatsTracker } from '../stats';
 import type { FileInfo } from '../types';
 import { ACCESS_DENIED_MSG } from './constants';
 
-export function registerListFolder(mcp: McpServer, plugin: McpPlugin): void {
+export function registerListFolder(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
     mcp.registerTool('list_folder', {
         description: 'List files and folders inside a specific directory.',
         inputSchema: {
             path: z.string().default('/').describe('Directory path (default: root)'),
         },
-    }, async ({ path }) => {
+    }, tracker.track('list_folder', async ({ path }) => {
         if (!plugin.security.isAllowed(path)) {
             return { content: [{ type: 'text', text: ACCESS_DENIED_MSG }], isError: true };
         }
@@ -29,5 +30,5 @@ export function registerListFolder(mcp: McpServer, plugin: McpPlugin): void {
                 type: c instanceof TFolder ? 'folder' : 'file',
             }));
         return { content: [{ type: 'text', text: JSON.stringify(children, null, 2) }] };
-    });
+    }));
 }

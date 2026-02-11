@@ -67,5 +67,51 @@ export class McpSettingTab extends PluginSettingTab {
                     this.plugin.settings.blacklist = value;
                     await this.plugin.saveSettings();
                 }));
+
+        this.renderStatsSection(containerEl);
+    }
+
+    private renderStatsSection(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: 'Tool Usage Statistics' });
+
+        const stats = this.plugin.toolStats;
+        const toolNames = Object.keys(stats);
+
+        if (toolNames.length === 0) {
+            containerEl.createEl('p', {
+                text: 'No tool usage recorded yet.',
+                cls: 'mcp-stats-empty',
+            });
+        } else {
+            const table = containerEl.createEl('table', { cls: 'mcp-stats-table' });
+            const thead = table.createEl('thead');
+            const headerRow = thead.createEl('tr');
+            headerRow.createEl('th', { text: 'Tool' });
+            headerRow.createEl('th', { text: 'Total' });
+            headerRow.createEl('th', { text: 'Successful' });
+            headerRow.createEl('th', { text: 'Failed' });
+
+            const tbody = table.createEl('tbody');
+            for (const name of toolNames.sort()) {
+                const s = stats[name];
+                const row = tbody.createEl('tr');
+                row.createEl('td', { text: name });
+                row.createEl('td', { text: String(s.total) });
+                row.createEl('td', { text: String(s.successful) });
+                row.createEl('td', { text: String(s.failed) });
+            }
+        }
+
+        new Setting(containerEl)
+            .setName('Reset Statistics')
+            .setDesc('Clear all tool usage statistics.')
+            .addButton(btn => btn
+                .setButtonText('Reset')
+                .setWarning()
+                .onClick(async () => {
+                    await this.plugin.resetStats();
+                    this.display();
+                    new Notice('Tool usage statistics reset');
+                }));
     }
 }

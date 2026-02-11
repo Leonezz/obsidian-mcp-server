@@ -29,6 +29,7 @@ export class Notice {
 export class TFile {
     path: string = '';
     name: string = '';
+    extension: string = 'md';
     stat: { mtime: number; ctime: number; size: number } = { mtime: 0, ctime: 0, size: 0 };
 }
 
@@ -53,4 +54,6 @@ export class Setting {
 export type CachedMetadata = {
     tags?: Array<{ tag: string }>;
     frontmatter?: Record<string, any>;
+    headings?: Array<{ level: number; heading: string }>;
+    links?: Array<{ link: string }>;
 };
