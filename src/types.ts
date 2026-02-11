@@ -20,7 +20,7 @@ export interface FileInfo {
 export interface SearchResult {
     path: string;
     mtime: string;
-    tags: string[] | undefined;
+    tags: string[];
 }
 
 export interface ActiveFileResult {

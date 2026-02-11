@@ -22,7 +22,9 @@ export class SecurityManager {
             .split('\n')
             .map(x => x.trim())
             .filter(x => x.length > 0);
-        this.pathRules = lines.filter(x => !x.startsWith('#'));
+        this.pathRules = lines
+            .filter(x => !x.startsWith('#'))
+            .map(x => normalizePath(x));
         this.tagRules = lines.filter(x => x.startsWith('#'));
     }
 
@@ -49,7 +51,7 @@ export class SecurityManager {
         }
 
         const normalizedPath = normalizePath(path);
-        if (this.pathRules.some(rule => normalizedPath.startsWith(normalizePath(rule)))) {
+        if (this.pathRules.some(rule => normalizedPath.startsWith(rule))) {
             return false;
         }
 

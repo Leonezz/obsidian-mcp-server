@@ -29,7 +29,10 @@ export default class McpPlugin extends Plugin {
     }
 
     async loadSettings(): Promise<void> {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData()) };
+        if (this.settings.port < 1024 || this.settings.port > 65535) {
+            this.settings.port = DEFAULT_SETTINGS.port;
+        }
         if (this.security) this.security.reloadRules();
     }
 
@@ -39,6 +42,7 @@ export default class McpPlugin extends Plugin {
     }
 
     restartServer(): void {
+        if (!this.mcpServer) return;
         this.mcpServer.stop();
         this.mcpServer.start();
     }

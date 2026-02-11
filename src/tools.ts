@@ -157,7 +157,7 @@ export function registerTools(mcp: McpServer, plugin: McpPlugin): void {
             const results: SearchResult[] = files.map(f => ({
                 path: f.path,
                 mtime: moment(f.stat.mtime).format(),
-                tags: plugin.app.metadataCache.getFileCache(f)?.tags?.map(t => t.tag),
+                tags: getTagsFromCache(plugin.app.metadataCache.getFileCache(f)),
             }));
 
             const limited = results.slice(0, MAX_SEARCH_RESULTS);

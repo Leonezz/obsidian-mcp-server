@@ -8,18 +8,29 @@ import { Notice } from 'obsidian';
 import type McpPlugin from './main';
 import { registerTools } from './tools';
 
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_SESSIONS = 10;
+
 interface ActiveSession {
     transport: StreamableHTTPServerTransport;
     mcp: McpServer;
+    lastAccess: number;
 }
 
 export class McpHttpServer {
     private httpServer: http.Server | null = null;
     private sessions = new Map<string, ActiveSession>();
+    private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
     constructor(private plugin: McpPlugin) {}
 
     stop(): void {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
+
         for (const [, session] of this.sessions) {
             session.transport.close().catch(() => { /* intentionally ignored */ });
         }
@@ -54,6 +65,8 @@ export class McpHttpServer {
                 });
             });
 
+            this.startSessionCleanup();
+
             const port = this.plugin.settings.port;
             this.httpServer = app.listen(port, '127.0.0.1', () => {
                 new Notice(`MCP Server Online (Port ${port})`);
@@ -69,6 +82,34 @@ export class McpHttpServer {
         } catch (e) {
             console.error('Failed to start MCP Server:', e);
             new Notice('MCP Server Failed to Start');
+        }
+    }
+
+    private startSessionCleanup(): void {
+        this.cleanupInterval = setInterval(() => {
+            const now = Date.now();
+            for (const [id, session] of this.sessions) {
+                if (now - session.lastAccess > SESSION_TTL_MS) {
+                    session.transport.close().catch(() => { /* intentionally ignored */ });
+                    this.sessions.delete(id);
+                }
+            }
+        }, CLEANUP_INTERVAL_MS);
+    }
+
+    private evictOldestSession(): void {
+        let oldestId: string | null = null;
+        let oldestTime = Infinity;
+        for (const [id, session] of this.sessions) {
+            if (session.lastAccess < oldestTime) {
+                oldestTime = session.lastAccess;
+                oldestId = id;
+            }
+        }
+        if (oldestId) {
+            const session = this.sessions.get(oldestId)!;
+            session.transport.close().catch(() => { /* intentionally ignored */ });
+            this.sessions.delete(oldestId);
         }
     }
 
@@ -109,6 +150,7 @@ export class McpHttpServer {
             const sessionId = req.headers['mcp-session-id'] as string | undefined;
             if (sessionId && this.sessions.has(sessionId)) {
                 const session = this.sessions.get(sessionId)!;
+                session.lastAccess = Date.now();
                 await session.transport.handleRequest(req, res, req.body);
                 return;
             }
@@ -138,6 +180,7 @@ export class McpHttpServer {
 
         if (sessionId && this.sessions.has(sessionId)) {
             const session = this.sessions.get(sessionId)!;
+            session.lastAccess = Date.now();
             await session.transport.handleRequest(req, res, req.body);
             return;
         }
@@ -145,6 +188,11 @@ export class McpHttpServer {
         if (!isInitializeRequest(req.body)) {
             res.status(400).json({ error: 'Bad request: expected initialization or valid session ID.' });
             return;
+        }
+
+        // Evict oldest session if at capacity
+        if (this.sessions.size >= MAX_SESSIONS) {
+            this.evictOldestSession();
         }
 
         const transport = new StreamableHTTPServerTransport({
@@ -160,7 +208,7 @@ export class McpHttpServer {
         await mcp.connect(transport);
 
         if (transport.sessionId) {
-            this.sessions.set(transport.sessionId, { transport, mcp });
+            this.sessions.set(transport.sessionId, { transport, mcp, lastAccess: Date.now() });
             transport.onclose = () => {
                 if (transport.sessionId) {
                     this.sessions.delete(transport.sessionId);
