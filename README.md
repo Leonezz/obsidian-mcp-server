@@ -9,15 +9,40 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 ## Features
 
 *   **Context Awareness:** `get_active_file` lets the agent see exactly what you are working on.
-*   **Vault Access:** `read_note` allows retrieving specific notes by path.
+*   **Vault Access:** `read_note`, `get_note_metadata`, and `describe_vault` provide full vault visibility.
+*   **Note Management:** `create_note`, `edit_note`, and `delete_note` allow agents to manage your notes.
+*   **Search:** `search_notes` filters by date/tags; `search_content` does full-text search with line-number snippets.
 *   **Quick Capture:** `append_daily_note` works with your Daily Notes settings (creates/appends correctly).
-*   **Secure:** Uses a local **Auth Token** to prevent unauthorized access.
+*   **Discovery:** `list_folder`, `list_all_tags`, and `list_recent_notes` help agents explore the vault.
+*   **Usage Statistics:** Track tool call counts (total/successful/failed) in Settings, with persistent storage.
+*   **Secure:** Uses a local **Auth Token** with timing-safe comparison to prevent unauthorized access.
+*   **Access Control:** Blacklist paths and tags to keep sensitive notes private.
 
 ## Architecture
 
-*   **Transport:** SSE (Server-Sent Events).
-*   **Endpoint:** `http://localhost:<PORT>/sse`
+*   **Transport:** Streamable HTTP.
+*   **Endpoint:** `http://localhost:<PORT>/mcp`
 *   **Security:** Bearer Token Authentication required.
+
+## Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_active_file` | Returns content + metadata of the currently open note |
+| `read_note` | Reads a specific note by vault-relative path |
+| `append_daily_note` | Appends text to today's daily note |
+| `list_folder` | Lists files/folders in a directory |
+| `list_all_tags` | Lists all tags in the vault with usage counts |
+| `search_notes` | Filters notes by date range and/or tags (max 100 results) |
+| `describe_vault` | Vault overview: name, file/folder counts, total size, file type breakdown, tag count |
+| `create_note` | Create a new note at a given path (prevents overwriting) |
+| `edit_note` | Replace entire content of an existing note |
+| `delete_note` | Delete a note by path |
+| `get_note_metadata` | Get frontmatter, tags, headings, links without full content |
+| `list_recent_notes` | Most recently modified notes, sorted newest-first (default 10, max 50) |
+| `search_content` | Case-insensitive full-text search with line-number snippets (max 50 results) |
+
+All tools enforce access control rules before returning data.
 
 ## Installation
 
@@ -30,17 +55,25 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 1.  Go to **Settings -> Obsidian MCP Server**.
 2.  Note your **Server Port** (Default: `27123`).
 3.  Copy your **Auth Token**.
+4.  Optionally configure **Access Control** blacklist rules for paths and tags.
 
-## Usage with Claude Desktop
+## Usage with MCP Clients
 
-Add this to your `claude_desktop_config.json`:
+The server uses **Streamable HTTP** transport on `http://localhost:<PORT>/mcp`. Configure your MCP client with:
+
+- **URL:** `http://localhost:27123/mcp`
+- **Auth:** Bearer token (from plugin settings)
+
+Example configuration for clients that support Streamable HTTP:
 
 ```json
 {
   "mcpServers": {
     "obsidian": {
-      "url": "http://localhost:27123/sse?token=YOUR_TOKEN",
-      "transport": "sse"
+      "url": "http://localhost:27123/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN"
+      }
     }
   }
 }
@@ -62,8 +95,10 @@ If you are an AI Agent trying to install this MCP server for a user, follow thes
 
 ```json
 "obsidian": {
-  "url": "http://localhost:<USER_PORT>/sse?token=<USER_TOKEN>",
-  "transport": "sse"
+  "url": "http://localhost:<USER_PORT>/mcp",
+  "headers": {
+    "Authorization": "Bearer <USER_TOKEN>"
+  }
 }
 ```
 
