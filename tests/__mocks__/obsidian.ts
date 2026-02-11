@@ -10,3 +10,13 @@ export class Plugin {
 export class Notice {
   constructor(message: string) {}
 }
+
+export class TFile {
+  path: string;
+  stat: any;
+}
+
+export class TFolder {
+  path: string;
+  children: any[];
+}
