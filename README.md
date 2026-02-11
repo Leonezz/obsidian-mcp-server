@@ -21,7 +21,17 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 
 ## Installation
 
-### Manual Installation
+### Method 1: BRAT (Recommended for Beta)
+This is the easiest way to install and keep it updated before it hits the Community Store.
+
+1.  Install the **BRAT** plugin from the Obsidian Community Plugins store.
+2.  Open **BRAT** settings.
+3.  Click **"Add Beta plugin"**.
+4.  Paste the repository URL: `https://github.com/zhuwenq/obsidian-mcp-server`
+5.  Click **"Add Plugin"**.
+6.  Enable "Obsidian MCP Server" in your Community Plugins list.
+
+### Method 2: Manual Installation
 1.  Download the latest `main.js`, `manifest.json`, and `styles.css` from the Releases page.
 2.  Create a folder: `.obsidian/plugins/obsidian-mcp-server/`.
 3.  Place the files inside.
@@ -31,6 +41,10 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 1.  Clone this repo.
 2.  `npm install`
 3.  `npm run build` -> Creates `main.js`.
+
+## Configuration
+Go to **Settings -> Obsidian MCP Server**.
+*   **Server Port:** Default is `27123`. Change this if you have conflicts.
 
 ## Usage with Claude Desktop
 
