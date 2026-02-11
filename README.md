@@ -16,7 +16,7 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 ## Architecture
 
 *   **Transport:** SSE (Server-Sent Events).
-*   **Endpoint:** `http://localhost:27123/sse`
+*   **Endpoint:** `http://localhost:<PORT>/sse`
 *   **Security:** Bearer Token Authentication required.
 
 ## Installation
@@ -28,7 +28,8 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 
 ## Configuration
 1.  Go to **Settings -> Obsidian MCP Server**.
-2.  Copy your **Auth Token**.
+2.  Note your **Server Port** (Default: `27123`).
+3.  Copy your **Auth Token**.
 
 ## Usage with Claude Desktop
 
@@ -38,17 +39,12 @@ Add this to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "obsidian": {
-      "url": "http://localhost:27123/sse",
-      "transport": "sse",
-      "headers": {
-        "Authorization": "Bearer <YOUR_TOKEN_HERE>"
-      }
+      "url": "http://localhost:27123/sse?token=YOUR_TOKEN",
+      "transport": "sse"
     }
   }
 }
 ```
-*Note: Claude Desktop might not support headers in SSE config yet. If not, append `?token=<YOUR_TOKEN>` to the URL:*
-`"url": "http://localhost:27123/sse?token=YOUR_TOKEN"`
 
 ---
 
@@ -56,17 +52,19 @@ Add this to your `claude_desktop_config.json`:
 
 If you are an AI Agent trying to install this MCP server for a user, follow these steps:
 
-1.  **Verify Installation:** Check if the user has Obsidian installed and the plugin `obsidian-mcp-server` is active (look in `.obsidian/plugins/`).
-2.  **Retrieve Token:** Ask the user to provide the Auth Token from Obsidian Settings.
+1.  **Verify Installation:** Check if the user has Obsidian installed and the plugin `obsidian-mcp-server` is active.
+2.  **Retrieve Credentials:** Ask the user for two things:
+    *   The **Auth Token** (from Obsidian Settings).
+    *   The **Server Port** (Default is `27123`, but check if they changed it).
 3.  **Configure Client:**
-    *   Locate the MCP Client configuration file (e.g., `~/Library/Application Support/Claude/claude_desktop_config.json`).
-    *   Insert the following server definition:
+    *   Locate the MCP Client configuration file.
+    *   Insert the following server definition (replacing placeholders):
 
 ```json
 "obsidian": {
-  "url": "http://localhost:27123/sse?token=<USER_PROVIDED_TOKEN>",
+  "url": "http://localhost:<USER_PORT>/sse?token=<USER_TOKEN>",
   "transport": "sse"
 }
 ```
 
-4.  **Restart Client:** Tell the user to restart their MCP Client (e.g., Claude Desktop).
+4.  **Restart Client:** Tell the user to restart their MCP Client.
