@@ -50,4 +50,23 @@ Add this to your `claude_desktop_config.json`:
 *Note: Claude Desktop might not support headers in SSE config yet. If not, append `?token=<YOUR_TOKEN>` to the URL:*
 `"url": "http://localhost:27123/sse?token=YOUR_TOKEN"`
 
-Restart Claude Desktop.
+---
+
+## 🤖 Instructions for AI Agents
+
+If you are an AI Agent trying to install this MCP server for a user, follow these steps:
+
+1.  **Verify Installation:** Check if the user has Obsidian installed and the plugin `obsidian-mcp-server` is active (look in `.obsidian/plugins/`).
+2.  **Retrieve Token:** Ask the user to provide the Auth Token from Obsidian Settings.
+3.  **Configure Client:**
+    *   Locate the MCP Client configuration file (e.g., `~/Library/Application Support/Claude/claude_desktop_config.json`).
+    *   Insert the following server definition:
+
+```json
+"obsidian": {
+  "url": "http://localhost:27123/sse?token=<USER_PROVIDED_TOKEN>",
+  "transport": "sse"
+}
+```
+
+4.  **Restart Client:** Tell the user to restart their MCP Client (e.g., Claude Desktop).
