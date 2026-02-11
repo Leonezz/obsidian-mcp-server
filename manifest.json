@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-mcp-server",
+  "name": "MCP Server",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Expose Obsidian vault and commands to AI Agents via Model Context Protocol (MCP).",
+  "author": "zhuwenq",
+  "authorUrl": "https://github.com/zhuwenq",
+  "isDesktopOnly": true
+}

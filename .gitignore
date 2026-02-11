@@ -1,6 +1,5 @@
 node_modules/
 .DS_Store
 main.js
-styles.css
-manifest.json
 .obsidian/
+dist/
