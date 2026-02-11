@@ -1,17 +1,22 @@
-import { Plugin, Notice, PluginSettingTab, App, Setting } from 'obsidian';
-import express from 'express';
+import { Plugin, Notice, PluginSettingTab, App, Setting, TFile } from 'obsidian';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { z } from 'zod';
+import { getDailyNote, createDailyNote, getAllDailyNotes } from 'obsidian-daily-notes-interface';
+// @ts-ignore - moment is global in Obsidian
+const moment = window.moment;
 
 // --- Settings Definitions ---
 interface McpPluginSettings {
     port: number;
+    authToken: string;
 }
 
 const DEFAULT_SETTINGS: McpPluginSettings = {
-    port: 27123
+    port: 27123,
+    authToken: ""
 }
 
 // --- Main Plugin Class ---
@@ -24,10 +29,13 @@ export default class McpPlugin extends Plugin {
         console.log('Loading Obsidian MCP Server...');
         await this.loadSettings();
 
-        // Add Settings Tab
-        this.addSettingTab(new McpSettingTab(this.app, this));
+        // Generate Auth Token if missing
+        if (!this.settings.authToken) {
+            this.settings.authToken = require('crypto').randomBytes(16).toString('hex');
+            await this.saveSettings();
+        }
 
-        // Start Server
+        this.addSettingTab(new McpSettingTab(this.app, this));
         this.startServer();
     }
 
@@ -53,7 +61,6 @@ export default class McpPlugin extends Plugin {
     }
 
     startServer() {
-        // Ensure old server is stopped first
         this.stopServer();
 
         try {
@@ -61,7 +68,24 @@ export default class McpPlugin extends Plugin {
             app.use(cors());
             app.use(express.json());
 
-            // 1. Initialize MCP Server
+            // --- Authentication Middleware ---
+            const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+                const clientToken = req.headers.authorization?.replace("Bearer ", "") || req.query.token;
+                
+                if (clientToken === this.settings.authToken) {
+                    return next();
+                }
+                
+                // Allow "local" checks if needed, but safer to require token always.
+                // Log failed attempt
+                console.warn(`MCP Auth Failed. IP: ${req.ip}`);
+                res.status(403).json({ error: "Unauthorized. Please check your Auth Token in Obsidian Settings." });
+            };
+
+            // Apply Auth to all routes
+            app.use(authMiddleware);
+
+            // 1. Initialize MCP
             this.mcp = new McpServer({
                 name: "Obsidian MCP",
                 version: "1.0.0"
@@ -70,7 +94,7 @@ export default class McpPlugin extends Plugin {
             // 2. Register Tools
             this.registerTools();
 
-            // 3. Set up Transport Endpoints
+            // 3. Routes
             app.get('/sse', async (req, res) => {
                 const transport = new SSEServerTransport('/message', res);
                 await this.mcp.connect(transport);
@@ -83,13 +107,13 @@ export default class McpPlugin extends Plugin {
 
             // 4. Listen
             this.server = app.listen(this.settings.port, () => {
-                console.log(`Obsidian MCP Server listening on http://localhost:${this.settings.port}/sse`);
-                new Notice(`MCP Server Online: Port ${this.settings.port}`);
+                console.log(`Obsidian MCP Server listening on port ${this.settings.port}`);
+                new Notice(`MCP Server Online (Port ${this.settings.port})`);
             });
 
             this.server.on('error', (err: any) => {
                 if (err.code === 'EADDRINUSE') {
-                    console.error(`Port ${this.settings.port} is already in use.`);
+                    console.error(`Port ${this.settings.port} is busy.`);
                     new Notice(`MCP Error: Port ${this.settings.port} busy`);
                 } else {
                     console.error('MCP Server Error:', err);
@@ -103,22 +127,18 @@ export default class McpPlugin extends Plugin {
     }
 
     registerTools() {
-        // --- Tool: get_active_file ---
+        // --- get_active_file ---
         this.mcp.tool(
             "get_active_file",
-            "Get the content and metadata of the currently active/focused note in Obsidian.",
+            "Get the content and metadata of the currently active note.",
             {}, 
             async () => {
                 const activeFile = this.app.workspace.getActiveFile();
                 if (!activeFile) {
-                    return {
-                        content: [{ type: "text", text: "No active file. Please open a note." }]
-                    };
+                    return { content: [{ type: "text", text: "No active file." }] };
                 }
-
                 const content = await this.app.vault.read(activeFile);
                 const metadata = this.app.metadataCache.getFileCache(activeFile);
-
                 return {
                     content: [{ 
                         type: "text", 
@@ -132,59 +152,48 @@ export default class McpPlugin extends Plugin {
             }
         );
 
-        // --- Tool: read_note ---
+        // --- read_note ---
         this.mcp.tool(
             "read_note",
-            "Read the raw content of a specific note by path.",
-            { path: z.string().describe("Vault-relative path to the note (e.g. 'Folder/Note.md')") },
+            "Read a note by path.",
+            { path: z.string() },
             async ({ path }) => {
                 const file = this.app.vault.getAbstractFileByPath(path);
-                if (!file) {
-                    return { content: [{ type: "text", text: `Error: File not found at '${path}'` }], isError: true };
+                if (file instanceof TFile) {
+                    const content = await this.app.vault.read(file);
+                    return { content: [{ type: "text", text: content }] };
                 }
-                // @ts-ignore
-                if (!file.stat) {
-                     return { content: [{ type: "text", text: `Error: '${path}' is a folder, not a file.` }], isError: true };
-                }
-                
-                // @ts-ignore
-                const content = await this.app.vault.read(file);
-                return { content: [{ type: "text", text: content }] };
+                return { content: [{ type: "text", text: `File not found or is a folder: ${path}` }], isError: true };
             }
         );
         
-        // --- Tool: append_daily_note ---
+        // --- append_daily_note ---
         this.mcp.tool(
             "append_daily_note",
-            "Append text to today's daily note. Creates it if it doesn't exist.",
+            "Append text to today's daily note.",
             { text: z.string() },
             async ({ text }) => {
-                const date = new Date();
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const filename = `${year}-${month}-${day}.md`;
+                const dailyNotes = getAllDailyNotes();
+                const now = moment();
+                let file = getDailyNote(now, dailyNotes);
                 
-                let file = this.app.vault.getAbstractFileByPath(filename);
                 if (!file) {
-                    file = await this.app.vault.create(filename, "");
+                    file = await createDailyNote(now);
                 }
                 
-                if (file) {
-                    // @ts-ignore
+                if (file instanceof TFile) {
                     const content = await this.app.vault.read(file);
-                    // @ts-ignore
                     await this.app.vault.modify(file, content + "\n" + text);
-                    return { content: [{ type: "text", text: `Appended to ${filename}` }] };
+                    return { content: [{ type: "text", text: `Appended to ${file.path}` }] };
                 }
                 
-                return { content: [{ type: "text", text: "Could not find or create daily note." }], isError: true };
+                return { content: [{ type: "text", text: "Failed to resolve daily note." }], isError: true };
             }
         );
     }
 }
 
-// --- Settings Tab Class ---
+// --- Settings Tab ---
 class McpSettingTab extends PluginSettingTab {
     plugin: McpPlugin;
 
@@ -196,23 +205,49 @@ class McpSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-
-        containerEl.createEl('h2', { text: 'Obsidian MCP Server Settings' });
+        containerEl.createEl('h2', { text: 'Obsidian MCP Server' });
 
         new Setting(containerEl)
             .setName('Server Port')
-            .setDesc('The port the MCP server listens on. Default: 27123. (Requires Restart)')
+            .setDesc('Port to listen on. (Default: 27123)')
             .addText(text => text
-                .setPlaceholder('27123')
                 .setValue(String(this.plugin.settings.port))
                 .onChange(async (value) => {
                     const port = Number(value);
-                    if (!isNaN(port) && port > 0 && port < 65535) {
+                    if (!isNaN(port)) {
                         this.plugin.settings.port = port;
                         await this.plugin.saveSettings();
-                        // Restart server to apply changes
                         this.plugin.startServer();
                     }
+                }));
+
+        // Auth Token Display
+        new Setting(containerEl)
+            .setName('Auth Token')
+            .setDesc('Required for connecting. Add this to your Agent config. (Click to Copy)')
+            .addText(text => text
+                .setValue(this.plugin.settings.authToken)
+                .setDisabled(true) // Read-only mostly, unless we want to allow rotation
+            )
+            .addExtraButton(btn => btn
+                .setIcon('copy')
+                .setTooltip('Copy Token')
+                .onClick(() => {
+                    navigator.clipboard.writeText(this.plugin.settings.authToken);
+                    new Notice('Token copied to clipboard');
+                }));
+        
+        new Setting(containerEl)
+            .setName('Regenerate Token')
+            .setDesc('Invalidates the old token.')
+            .addButton(btn => btn
+                .setButtonText('Regenerate')
+                .setWarning()
+                .onClick(async () => {
+                    this.plugin.settings.authToken = require('crypto').randomBytes(16).toString('hex');
+                    await this.plugin.saveSettings();
+                    this.display(); // Refresh UI
+                    this.plugin.startServer(); // Restart with new token
                 }));
     }
 }

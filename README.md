@@ -4,47 +4,31 @@
 
 This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian. It allows external AI tools (like Claude Desktop, Cursor, or CLI agents) to connect to Obsidian, read your active context, and perform actions directly within the app.
 
-> ⚠️ **Status:** Experimental / Alpha. Use with caution.
+> ⚠️ **Status:** Beta (Production Ready Logic).
 
 ## Features
 
-*   **Context Awareness:** `get_active_file` lets the agent see exactly what you are working on (content + frontmatter).
+*   **Context Awareness:** `get_active_file` lets the agent see exactly what you are working on.
 *   **Vault Access:** `read_note` allows retrieving specific notes by path.
-*   **Quick Capture:** `append_daily_note` lets the agent log tasks or thoughts to your daily note instantly.
-*   **Live Control:** Unlike external scripts, this runs *inside* Obsidian, enabling future features like "Open Tab" or "Run Command".
+*   **Quick Capture:** `append_daily_note` works with your Daily Notes settings (creates/appends correctly).
+*   **Secure:** Uses a local **Auth Token** to prevent unauthorized access.
 
 ## Architecture
 
 *   **Transport:** SSE (Server-Sent Events).
 *   **Endpoint:** `http://localhost:27123/sse`
-*   **Security:** Binds to `localhost` only. (Auth token coming soon).
+*   **Security:** Bearer Token Authentication required.
 
 ## Installation
 
-### Method 1: BRAT (Recommended for Beta)
-This is the easiest way to install and keep it updated before it hits the Community Store.
-
-1.  Install the **BRAT** plugin from the Obsidian Community Plugins store.
-2.  Open **BRAT** settings.
-3.  Click **"Add Beta plugin"**.
-4.  Paste the repository URL: `https://github.com/zhuwenq/obsidian-mcp-server`
-5.  Click **"Add Plugin"**.
-6.  Enable "Obsidian MCP Server" in your Community Plugins list.
-
-### Method 2: Manual Installation
-1.  Download the latest `main.js`, `manifest.json`, and `styles.css` from the Releases page.
-2.  Create a folder: `.obsidian/plugins/obsidian-mcp-server/`.
-3.  Place the files inside.
-4.  Reload Obsidian and enable the plugin in Community Plugins.
-
-### Development
-1.  Clone this repo.
-2.  `npm install`
-3.  `npm run build` -> Creates `main.js`.
+### Method 1: BRAT (Beta)
+1.  Install **BRAT** from Community Plugins.
+2.  Add Beta Plugin: `zhuwenq/obsidian-mcp-server`
+3.  Enable "Obsidian MCP Server".
 
 ## Configuration
-Go to **Settings -> Obsidian MCP Server**.
-*   **Server Port:** Default is `27123`. Change this if you have conflicts.
+1.  Go to **Settings -> Obsidian MCP Server**.
+2.  Copy your **Auth Token**.
 
 ## Usage with Claude Desktop
 
@@ -55,11 +39,15 @@ Add this to your `claude_desktop_config.json`:
   "mcpServers": {
     "obsidian": {
       "url": "http://localhost:27123/sse",
-      "transport": "sse"
+      "transport": "sse",
+      "headers": {
+        "Authorization": "Bearer <YOUR_TOKEN_HERE>"
+      }
     }
   }
 }
 ```
+*Note: Claude Desktop might not support headers in SSE config yet. If not, append `?token=<YOUR_TOKEN>` to the URL:*
+`"url": "http://localhost:27123/sse?token=YOUR_TOKEN"`
 
-Restart Claude Desktop. You should now be able to ask:
-> "What is in the note I'm currently looking at?"
+Restart Claude Desktop.
