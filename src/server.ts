@@ -1,5 +1,5 @@
-import crypto from 'crypto';
-import http from 'http';
+import * as crypto from 'crypto';
+import * as http from 'http';
 import express, { Request, Response, NextFunction } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -21,7 +21,7 @@ export class McpHttpServer {
 
     stop(): void {
         for (const [, session] of this.sessions) {
-            session.transport.close().catch(() => {});
+            session.transport.close().catch(() => { /* intentionally ignored */ });
         }
         this.sessions.clear();
 

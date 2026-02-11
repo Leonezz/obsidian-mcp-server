@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { Plugin } from 'obsidian';
 import { McpPluginSettings, DEFAULT_SETTINGS } from './types';
 import { SecurityManager } from './security';

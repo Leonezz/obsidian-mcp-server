@@ -1,4 +1,3 @@
-import { TFile, CachedMetadata } from 'obsidian';
 
 export interface McpPluginSettings {
     port: number;

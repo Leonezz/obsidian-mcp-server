@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type McpPlugin from './main';
 
