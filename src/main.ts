@@ -1,12 +1,15 @@
 import * as crypto from 'crypto';
 import { Plugin } from 'obsidian';
-import { McpPluginSettings, DEFAULT_SETTINGS } from './types';
+import { McpPluginSettings, DEFAULT_SETTINGS, ToolUsageStats } from './types';
 import { SecurityManager } from './security';
 import { McpHttpServer } from './server';
 import { McpSettingTab } from './settings';
+import { StatsTracker } from './stats';
 
 export default class McpPlugin extends Plugin {
     settings: McpPluginSettings = { ...DEFAULT_SETTINGS };
+    toolStats: ToolUsageStats = {};
+    statsTracker!: StatsTracker;
     security!: SecurityManager;
     private mcpServer!: McpHttpServer;
 
@@ -18,6 +21,12 @@ export default class McpPlugin extends Plugin {
             await this.saveSettings();
         }
 
+        this.statsTracker = new StatsTracker(
+            () => this.toolStats,
+            (stats) => { this.toolStats = stats; },
+            () => this.saveStats(),
+        );
+
         this.security = new SecurityManager(this);
         this.mcpServer = new McpHttpServer(this);
         this.addSettingTab(new McpSettingTab(this.app, this));
@@ -25,11 +34,22 @@ export default class McpPlugin extends Plugin {
     }
 
     async onunload(): Promise<void> {
+        await this.statsTracker.flush();
         this.mcpServer.stop();
     }
 
     async loadSettings(): Promise<void> {
-        this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData()) };
+        const raw = (await this.loadData()) ?? {};
+
+        // Backward-compatible: detect old format (flat settings) vs new { settings, toolStats }
+        if ('settings' in raw && typeof raw.settings === 'object') {
+            this.settings = { ...DEFAULT_SETTINGS, ...raw.settings };
+            this.toolStats = raw.toolStats ?? {};
+        } else {
+            this.settings = { ...DEFAULT_SETTINGS, ...raw };
+            this.toolStats = {};
+        }
+
         if (this.settings.port < 1024 || this.settings.port > 65535) {
             this.settings.port = DEFAULT_SETTINGS.port;
         }
@@ -37,8 +57,17 @@ export default class McpPlugin extends Plugin {
     }
 
     async saveSettings(): Promise<void> {
-        await this.saveData(this.settings);
+        await this.saveData({ settings: this.settings, toolStats: this.toolStats });
         if (this.security) this.security.reloadRules();
+    }
+
+    async saveStats(): Promise<void> {
+        await this.saveData({ settings: this.settings, toolStats: this.toolStats });
+    }
+
+    async resetStats(): Promise<void> {
+        this.toolStats = {};
+        await this.saveStats();
     }
 
     restartServer(): void {

@@ -1,3 +1,9 @@
 export const ACCESS_DENIED_MSG = 'Access denied or resource not found.';
 export const MAX_SEARCH_RESULTS = 100;
 export const MAX_APPEND_LENGTH = 50000;
+export const MAX_EDIT_LENGTH = 100000;
+export const MAX_CREATE_LENGTH = 100000;
+export const MAX_CONTENT_SEARCH_RESULTS = 50;
+export const MAX_SNIPPET_LENGTH = 200;
+export const MAX_RECENT_NOTES = 50;
+export const STATS_SAVE_DEBOUNCE_MS = 5000;

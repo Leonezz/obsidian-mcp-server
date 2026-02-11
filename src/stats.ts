@@ -1,0 +1,69 @@
+import type { ToolCallStats, ToolUsageStats } from './types';
+import { STATS_SAVE_DEBOUNCE_MS } from './tools/constants';
+
+const EMPTY_STATS: ToolCallStats = { total: 0, successful: 0, failed: 0 };
+
+export function recordToolCall(stats: ToolUsageStats, toolName: string): ToolUsageStats {
+    const prev = stats[toolName] ?? EMPTY_STATS;
+    return { ...stats, [toolName]: { ...prev, total: prev.total + 1 } };
+}
+
+export function recordToolSuccess(stats: ToolUsageStats, toolName: string): ToolUsageStats {
+    const prev = stats[toolName] ?? EMPTY_STATS;
+    return { ...stats, [toolName]: { ...prev, successful: prev.successful + 1 } };
+}
+
+export function recordToolFailure(stats: ToolUsageStats, toolName: string): ToolUsageStats {
+    const prev = stats[toolName] ?? EMPTY_STATS;
+    return { ...stats, [toolName]: { ...prev, failed: prev.failed + 1 } };
+}
+
+export class StatsTracker {
+    private dirty = false;
+    private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    constructor(
+        private getStats: () => ToolUsageStats,
+        private setStats: (stats: ToolUsageStats) => void,
+        private persist: () => Promise<void>,
+    ) {}
+
+    track<T>(toolName: string, handler: () => Promise<T>): () => Promise<T> {
+        return async () => {
+            this.setStats(recordToolCall(this.getStats(), toolName));
+            try {
+                const result = await handler();
+                this.setStats(recordToolSuccess(this.getStats(), toolName));
+                this.scheduleSave();
+                return result;
+            } catch (err) {
+                this.setStats(recordToolFailure(this.getStats(), toolName));
+                this.scheduleSave();
+                throw err;
+            }
+        };
+    }
+
+    private scheduleSave(): void {
+        this.dirty = true;
+        if (this.debounceTimer) return;
+        this.debounceTimer = setTimeout(async () => {
+            this.debounceTimer = null;
+            if (this.dirty) {
+                this.dirty = false;
+                await this.persist();
+            }
+        }, STATS_SAVE_DEBOUNCE_MS);
+    }
+
+    async flush(): Promise<void> {
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = null;
+        }
+        if (this.dirty) {
+            this.dirty = false;
+            await this.persist();
+        }
+    }
+}

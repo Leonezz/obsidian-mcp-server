@@ -3,10 +3,11 @@ import { z } from 'zod';
 import moment from 'moment';
 import { getTagsFromCache } from '../utils';
 import type McpPlugin from '../main';
+import type { StatsTracker } from '../stats';
 import type { SearchResult } from '../types';
 import { MAX_SEARCH_RESULTS } from './constants';
 
-export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin): void {
+export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
     mcp.registerTool('search_notes', {
         description: 'Search for notes by time range and tags. Returns a list of file paths.',
         inputSchema: {
@@ -14,7 +15,7 @@ export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin): void {
             end_date: z.string().optional().describe('ISO date string. Filter notes modified before this date.'),
             tags: z.array(z.string()).optional().describe("List of tags to filter by (e.g. ['#work'])"),
         },
-    }, async ({ start_date, end_date, tags }) => {
+    }, tracker.track('search_notes', async ({ start_date, end_date, tags }) => {
         let files = plugin.app.vault.getFiles();
         files = files.filter(f => plugin.security.isAllowed(f));
 
@@ -50,5 +51,5 @@ export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin): void {
         return {
             content: [{ type: 'text', text: JSON.stringify(limited, null, 2) + suffix }],
         };
-    });
+    }));
 }
