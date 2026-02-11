@@ -1,4 +1,4 @@
-import { Plugin, Notice, PluginSettingTab, App, Setting, TFile, TFolder } from 'obsidian';
+import { Plugin, Notice, PluginSettingTab, App, Setting, TFile, TFolder, CachedMetadata } from 'obsidian';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -12,13 +12,85 @@ const moment = window.moment;
 interface McpPluginSettings {
     port: number;
     authToken: string;
-    blacklist: string; // New: Newline separated paths
+    blacklist: string; // Newline separated rules
 }
 
 const DEFAULT_SETTINGS: McpPluginSettings = {
     port: 27123,
     authToken: "",
-    blacklist: "Secret/\nPrivate/"
+    blacklist: "Secret/\n#secret"
+}
+
+// --- Security Manager ---
+class SecurityManager {
+    private pathRules: string[] = [];
+    private tagRules: string[] = [];
+
+    constructor(private plugin: McpPlugin) {
+        this.reloadRules();
+    }
+
+    reloadRules() {
+        const lines = this.plugin.settings.blacklist.split('\n').map(x => x.trim()).filter(x => x.length > 0);
+        this.pathRules = lines.filter(x => !x.startsWith('#'));
+        this.tagRules = lines.filter(x => x.startsWith('#'));
+    }
+
+    isTagAllowed(tag: string): boolean {
+        return !this.tagRules.some(rule => tag.startsWith(rule));
+    }
+
+    isAllowed(fileOrPath: TFile | string): boolean {
+        let path: string;
+        let tags: string[] = [];
+
+        if (typeof fileOrPath === 'string') {
+            path = fileOrPath;
+            // If it's just a path, we can't check tags easily unless we resolve it.
+            // For list_folder/search, we might only check path.
+            // For read_note, we should resolve to TFile to check tags.
+            const abstractFile = this.plugin.app.vault.getAbstractFileByPath(path);
+            if (abstractFile instanceof TFile) {
+                const cache = this.plugin.app.metadataCache.getFileCache(abstractFile);
+                tags = this.getTagsFromCache(cache);
+            }
+        } else {
+            path = fileOrPath.path;
+            const cache = this.plugin.app.metadataCache.getFileCache(fileOrPath);
+            tags = this.getTagsFromCache(cache);
+        }
+
+        // 1. Check Path Rules
+        if (this.pathRules.some(rule => path.startsWith(rule))) {
+            return false;
+        }
+
+        // 2. Check Tag Rules
+        if (this.tagRules.length > 0 && tags.length > 0) {
+            // If file has ANY tag that matches a blacklisted tag
+            // Tag match: #secret matches #secret, #secret/nested
+            if (tags.some(fileTag => this.tagRules.some(rule => fileTag.startsWith(rule)))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private getTagsFromCache(cache: CachedMetadata | null): string[] {
+        if (!cache) return [];
+        const tagList = new Set<string>();
+        // Inline tags
+        cache.tags?.forEach(t => tagList.add(t.tag));
+        // Frontmatter tags
+        const fmTags = cache.frontmatter?.tags;
+        if (Array.isArray(fmTags)) {
+            fmTags.forEach(t => tagList.add('#' + t));
+        } else if (typeof fmTags === 'string') {
+            fmTags.split(',').forEach(t => tagList.add('#' + t.trim()));
+        }
+        return Array.from(tagList);
+    }
 }
 
 // --- Main Plugin Class ---
@@ -26,6 +98,7 @@ export default class McpPlugin extends Plugin {
     settings: McpPluginSettings;
     private server: any;
     private mcp: McpServer;
+    security: SecurityManager;
 
     async onload() {
         console.log('Loading Obsidian MCP Server...');
@@ -36,6 +109,7 @@ export default class McpPlugin extends Plugin {
             await this.saveSettings();
         }
 
+        this.security = new SecurityManager(this);
         this.addSettingTab(new McpSettingTab(this.app, this));
         this.startServer();
     }
@@ -47,10 +121,12 @@ export default class McpPlugin extends Plugin {
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        if (this.security) this.security.reloadRules();
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
+        if (this.security) this.security.reloadRules();
     }
 
     stopServer() {
@@ -59,13 +135,6 @@ export default class McpPlugin extends Plugin {
             this.server = null;
             console.log('MCP Server stopped.');
         }
-    }
-
-    // --- Security Helper ---
-    isPathAllowed(path: string): boolean {
-        const blocked = this.settings.blacklist.split('\n').map(x => x.trim()).filter(x => x.length > 0);
-        // Returns TRUE if path does NOT start with any blocked prefix
-        return !blocked.some(b => path.startsWith(b));
     }
 
     startServer() {
@@ -125,7 +194,7 @@ export default class McpPlugin extends Plugin {
     }
 
     registerTools() {
-        // --- Tool: get_active_file ---
+        // --- get_active_file ---
         this.mcp.tool(
             "get_active_file",
             "Get the content and metadata of the currently active note.",
@@ -136,9 +205,8 @@ export default class McpPlugin extends Plugin {
                     return { content: [{ type: "text", text: "No active file." }] };
                 }
                 
-                // Security Check
-                if (!this.isPathAllowed(activeFile.path)) {
-                    return { content: [{ type: "text", text: "Access Denied: The active file is in a blacklisted folder." }] };
+                if (!this.security.isAllowed(activeFile)) {
+                    return { content: [{ type: "text", text: "Access Denied: The active file is restricted." }] };
                 }
 
                 const content = await this.app.vault.read(activeFile);
@@ -156,19 +224,24 @@ export default class McpPlugin extends Plugin {
             }
         );
 
-        // --- Tool: read_note ---
+        // --- read_note ---
         this.mcp.tool(
             "read_note",
             "Read a note by path.",
-            { path: z.string() },
+            { path: z.string().describe("Vault-relative path (e.g. 'Notes/Meeting.md')") },
             async ({ path }) => {
-                // Security Check
-                if (!this.isPathAllowed(path)) {
+                // Initial check string-based (fast fail)
+                if (!this.security.isAllowed(path)) {
                     return { content: [{ type: "text", text: `Access Denied: '${path}' is blacklisted.` }], isError: true };
                 }
 
                 const file = this.app.vault.getAbstractFileByPath(path);
                 if (file instanceof TFile) {
+                    // Deep check with tags
+                    if (!this.security.isAllowed(file)) {
+                        return { content: [{ type: "text", text: `Access Denied: '${path}' contains restricted tags.` }], isError: true };
+                    }
+
                     const content = await this.app.vault.read(file);
                     return { content: [{ type: "text", text: content }] };
                 }
@@ -176,11 +249,11 @@ export default class McpPlugin extends Plugin {
             }
         );
         
-        // --- Tool: append_daily_note ---
+        // --- append_daily_note ---
         this.mcp.tool(
             "append_daily_note",
             "Append text to today's daily note.",
-            { text: z.string() },
+            { text: z.string().describe("Text to append") },
             async ({ text }) => {
                 const dailyNotes = getAllDailyNotes();
                 const now = moment();
@@ -188,11 +261,9 @@ export default class McpPlugin extends Plugin {
                 if (!file) file = await createDailyNote(now);
                 
                 if (file instanceof TFile) {
-                    // Security Check (Unlikely to blacklist dailies, but consistency matters)
-                    if (!this.isPathAllowed(file.path)) {
-                        return { content: [{ type: "text", text: "Access Denied: Daily notes folder is blacklisted." }], isError: true };
+                    if (!this.security.isAllowed(file)) {
+                        return { content: [{ type: "text", text: "Access Denied: Daily note is restricted." }], isError: true };
                     }
-
                     const content = await this.app.vault.read(file);
                     await this.app.vault.modify(file, content + "\n" + text);
                     return { content: [{ type: "text", text: `Appended to ${file.path}` }] };
@@ -201,21 +272,23 @@ export default class McpPlugin extends Plugin {
             }
         );
 
-        // --- Tool: list_folder ---
+        // --- list_folder ---
         this.mcp.tool(
             "list_folder",
             "List files and folders inside a specific directory.",
-            { path: z.string().default("/") },
+            { path: z.string().default("/").describe("Directory path (default: root)") },
             async ({ path }) => {
-                // Security Check
-                if (!this.isPathAllowed(path)) {
+                if (!this.security.isAllowed(path)) {
                     return { content: [{ type: "text", text: `Access Denied: '${path}' is blacklisted.` }], isError: true };
                 }
 
                 const folder = path === "/" ? this.app.vault.getRoot() : this.app.vault.getAbstractFileByPath(path);
                 if (folder instanceof TFolder) {
                     const children = folder.children
-                        .filter(c => this.isPathAllowed(c.path)) // Filter children too!
+                        // Filter children by path rules (can't check tags efficiently here without reading cache for all)
+                        // This is a trade-off: list_folder might show a file that is tag-blocked, but read_note will block it.
+                        // We filter by path rules at least.
+                        .filter(c => this.security.isAllowed(c.path)) 
                         .map(c => ({
                             name: c.name,
                             path: c.path,
@@ -227,34 +300,41 @@ export default class McpPlugin extends Plugin {
             }
         );
 
-        // --- Tool: list_all_tags ---
+        // --- list_all_tags ---
         this.mcp.tool(
             "list_all_tags",
             "List all hashtags used in the vault with their usage count.",
             {},
             async () => {
-                // Cannot filter tags easily by path unless we iterate all files.
-                // For now, allow listing tags globally. Tags aren't usually secret, content is.
                 // @ts-ignore
                 const tags = this.app.metadataCache.getTags();
-                return { content: [{ type: "text", text: JSON.stringify(tags, null, 2) }] };
+                // Filter out blacklisted tags from the list itself?
+                // Yes, don't reveal existence of secret tags.
+                // tags is Record<string, number>
+                const filteredTags: Record<string, number> = {};
+                for (const t in tags) {
+                    if (this.security.isTagAllowed(t)) {
+                        filteredTags[t] = tags[t];
+                    }
+                }
+                return { content: [{ type: "text", text: JSON.stringify(filteredTags, null, 2) }] };
             }
         );
 
-        // --- Tool: search_notes ---
+        // --- search_notes ---
         this.mcp.tool(
             "search_notes",
             "Search for notes by time range and tags. Returns a list of file paths.",
             {
-                start_date: z.string().optional(),
-                end_date: z.string().optional(),
-                tags: z.array(z.string()).optional()
+                start_date: z.string().optional().describe("ISO date string (YYYY-MM-DD). Filter notes modified after this date."),
+                end_date: z.string().optional().describe("ISO date string. Filter notes modified before this date."),
+                tags: z.array(z.string()).optional().describe("List of tags to filter by (e.g. ['#work'])")
             },
             async ({ start_date, end_date, tags }) => {
                 let files = this.app.vault.getFiles();
 
-                // 1. Security Filter First
-                files = files.filter(f => this.isPathAllowed(f.path));
+                // Security Filter (Checks Paths AND Tags via getFileCache)
+                files = files.filter(f => this.security.isAllowed(f));
 
                 // Date Filter
                 if (start_date) {
@@ -340,12 +420,11 @@ class McpSettingTab extends PluginSettingTab {
                 this.plugin.startServer();
             }));
 
-        // --- Blacklist Setting ---
         new Setting(containerEl)
             .setName('Access Control: Blacklist')
-            .setDesc('Paths starting with these lines will be blocked. (One per line).')
+            .setDesc('One rule per line.\n- Paths: "Secret/" blocks folders/files starting with "Secret/".\n- Tags: "#secret" blocks files containing the tag.')
             .addTextArea(text => text
-                .setPlaceholder('Secret/\nPrivate/')
+                .setPlaceholder('Secret/\n#private')
                 .setValue(this.plugin.settings.blacklist)
                 .onChange(async (value) => {
                     this.plugin.settings.blacklist = value;
