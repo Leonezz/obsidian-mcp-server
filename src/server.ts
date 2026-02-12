@@ -64,8 +64,7 @@ export class McpHttpServer {
             app.use(this.createAuthMiddleware());
 
             app.all('/mcp', (req: Request, res: Response) => {
-                this.handleMcpRequest(req, res).catch(err => {
-                    console.error('MCP request error:', err);
+                this.handleMcpRequest(req, res).catch(() => {
                     if (!res.headersSent) {
                         res.status(500).json({ error: 'Internal server error.' });
                     }
@@ -89,11 +88,10 @@ export class McpHttpServer {
                 if (err.code === 'EADDRINUSE') {
                     new Notice(`MCP Error: Port ${port} busy`);
                 } else {
-                    console.error('MCP Server Error:', err);
+                    new Notice(`MCP Server Error: ${err.message}`);
                 }
             });
-        } catch (e) {
-            console.error('Failed to start MCP Server:', e);
+        } catch {
             new Notice('MCP Server Failed to Start');
         }
     }
