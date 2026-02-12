@@ -28,11 +28,11 @@ export class StatsTracker {
         private persist: () => Promise<void>,
     ) {}
 
-    track<T>(toolName: string, handler: () => Promise<T>): () => Promise<T> {
-        return async () => {
+    track<T, A extends unknown[]>(toolName: string, handler: (...args: A) => Promise<T>): (...args: A) => Promise<T> {
+        return async (...args: A) => {
             this.setStats(recordToolCall(this.getStats(), toolName));
             try {
-                const result = await handler();
+                const result = await handler(...args);
                 this.setStats(recordToolSuccess(this.getStats(), toolName));
                 this.scheduleSave();
                 return result;

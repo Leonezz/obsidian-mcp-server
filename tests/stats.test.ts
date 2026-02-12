@@ -95,6 +95,26 @@ describe('StatsTracker', () => {
         expect(persist).toHaveBeenCalled();
     });
 
+    test('track forwards arguments to the handler', async () => {
+        let stats: ToolUsageStats = {};
+        const persist = jest.fn().mockResolvedValue(undefined);
+        const tracker = new StatsTracker(
+            () => stats,
+            (s) => { stats = s; },
+            persist,
+        );
+
+        const handler = tracker.track('arg_tool', async (args: { path: string }) => {
+            return { content: [{ type: 'text' as const, text: args.path }] };
+        });
+
+        const result = await handler({ path: 'Notes/Test.md' });
+        expect(result.content[0].text).toBe('Notes/Test.md');
+        expect(stats.arg_tool.total).toBe(1);
+        expect(stats.arg_tool.successful).toBe(1);
+        await tracker.flush();
+    });
+
     test('flush without activity does not persist', async () => {
         const persist = jest.fn().mockResolvedValue(undefined);
         const tracker = new StatsTracker(
