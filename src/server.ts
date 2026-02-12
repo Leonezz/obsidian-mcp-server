@@ -8,6 +8,9 @@ import { Notice } from 'obsidian';
 import type McpPlugin from './main';
 import { registerTools } from './tools';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PKG_VERSION: string = require('../package.json').version;
+
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_SESSIONS = 10;
@@ -145,29 +148,29 @@ export class McpHttpServer {
         };
     }
 
+    private hasInitializeRequest(body: unknown): boolean {
+        if (Array.isArray(body)) {
+            return body.some(msg => isInitializeRequest(msg));
+        }
+        return isInitializeRequest(body);
+    }
+
     private async handleMcpRequest(req: Request, res: Response): Promise<void> {
-        if (req.method === 'GET') {
-            const sessionId = req.headers['mcp-session-id'] as string | undefined;
+        const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+        // Route GET/DELETE to existing sessions
+        if (req.method === 'GET' || req.method === 'DELETE') {
             if (sessionId && this.sessions.has(sessionId)) {
                 const session = this.sessions.get(sessionId)!;
                 session.lastAccess = Date.now();
                 await session.transport.handleRequest(req, res, req.body);
                 return;
             }
-            res.status(400).json({ error: 'Invalid or missing session.' });
-            return;
-        }
-
-        if (req.method === 'DELETE') {
-            const sessionId = req.headers['mcp-session-id'] as string | undefined;
-            if (sessionId && this.sessions.has(sessionId)) {
-                const session = this.sessions.get(sessionId)!;
-                await session.transport.close();
-                this.sessions.delete(sessionId);
-                res.status(200).json({ status: 'session terminated' });
-                return;
-            }
-            res.status(404).json({ error: 'Session not found.' });
+            const status = req.method === 'GET' ? 400 : 404;
+            const error = req.method === 'GET'
+                ? 'Invalid or missing session.'
+                : 'Session not found.';
+            res.status(status).json({ error });
             return;
         }
 
@@ -176,8 +179,7 @@ export class McpHttpServer {
             return;
         }
 
-        const sessionId = req.headers['mcp-session-id'] as string | undefined;
-
+        // Route POST to existing session
         if (sessionId && this.sessions.has(sessionId)) {
             const session = this.sessions.get(sessionId)!;
             session.lastAccess = Date.now();
@@ -185,7 +187,8 @@ export class McpHttpServer {
             return;
         }
 
-        if (!isInitializeRequest(req.body)) {
+        // New session: body must contain an initialize request
+        if (!this.hasInitializeRequest(req.body)) {
             res.status(400).json({ error: 'Bad request: expected initialization or valid session ID.' });
             return;
         }
@@ -197,25 +200,24 @@ export class McpHttpServer {
 
         const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => crypto.randomUUID(),
+            onsessioninitialized: (id: string) => {
+                this.sessions.set(id, { transport, mcp, lastAccess: Date.now() });
+            },
         });
+
+        transport.onclose = () => {
+            if (transport.sessionId) {
+                this.sessions.delete(transport.sessionId);
+            }
+        };
 
         const mcp = new McpServer({
             name: 'Obsidian MCP',
-            version: '1.0.0',
+            version: PKG_VERSION,
         });
 
         registerTools(mcp, this.plugin);
         await mcp.connect(transport);
-
-        if (transport.sessionId) {
-            this.sessions.set(transport.sessionId, { transport, mcp, lastAccess: Date.now() });
-            transport.onclose = () => {
-                if (transport.sessionId) {
-                    this.sessions.delete(transport.sessionId);
-                }
-            };
-        }
-
         await transport.handleRequest(req, res, req.body);
     }
 }
