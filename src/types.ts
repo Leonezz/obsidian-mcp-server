@@ -3,12 +3,38 @@ export interface McpPluginSettings {
     port: number;
     authToken: string;
     blacklist: string;
+    // Phase 1: Instructions
+    enableInstructions: boolean;
+    customInstructions: string;
+    includeVaultStructure: boolean;
+    // Phase 2: Prompts
+    enablePrompts: boolean;
+    enableMarkdownGuide: boolean;
+    enableCanvasGuide: boolean;
+    enableBasesGuide: boolean;
+    // Phase 3: Resources
+    enableResources: boolean;
+    enableResourceSubscriptions: boolean;
+    maxResourcesListed: number;
+    // Phase 4: Annotations
+    enableSmartAnnotations: boolean;
 }
 
 export const DEFAULT_SETTINGS: McpPluginSettings = {
     port: 27123,
     authToken: '',
     blacklist: 'Secret/\n#secret',
+    enableInstructions: true,
+    customInstructions: '',
+    includeVaultStructure: true,
+    enablePrompts: true,
+    enableMarkdownGuide: true,
+    enableCanvasGuide: true,
+    enableBasesGuide: true,
+    enableResources: true,
+    enableResourceSubscriptions: true,
+    maxResourcesListed: 500,
+    enableSmartAnnotations: true,
 };
 
 export interface ToolCallStats {

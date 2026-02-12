@@ -2,11 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
-import { ACCESS_DENIED_MSG, MAX_CREATE_LENGTH } from './constants';
+import type { McpLogger } from '../logging';
+import { ACCESS_DENIED_MSG, MAX_CREATE_LENGTH, WRITE_ANNOTATIONS } from './constants';
 
-export function registerCreateNote(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
+export function registerCreateNote(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, logger: McpLogger): void {
     mcp.registerTool('create_note', {
         description: 'Create a new note at the specified path. Fails if a file already exists at that path.',
+        annotations: WRITE_ANNOTATIONS,
         inputSchema: {
             path: z.string().describe("Vault-relative path for the new note (e.g. 'Notes/NewNote.md')"),
             content: z.string()
@@ -15,6 +17,7 @@ export function registerCreateNote(mcp: McpServer, plugin: McpPlugin, tracker: S
         },
     }, tracker.track('create_note', async ({ path, content }) => {
         if (!plugin.security.isAllowed(path)) {
+            logger.warning('create_note: access denied', { path });
             return { content: [{ type: 'text', text: ACCESS_DENIED_MSG }], isError: true };
         }
         const existing = plugin.app.vault.getAbstractFileByPath(path);

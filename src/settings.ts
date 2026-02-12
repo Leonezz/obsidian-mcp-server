@@ -16,6 +16,7 @@ export class McpSettingTab extends PluginSettingTab {
         containerEl.empty();
         containerEl.createEl('h2', { text: 'Obsidian MCP Server' });
 
+        // --- Server Section ---
         new Setting(containerEl)
             .setName('Server Port')
             .setDesc('Port to listen on (1024-65535). Default: 27123. Server restarts on change.')
@@ -68,6 +69,140 @@ export class McpSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        // --- Agent Instructions Section ---
+        containerEl.createEl('h3', { text: 'Agent Instructions' });
+
+        new Setting(containerEl)
+            .setName('Enable Instructions')
+            .setDesc('Send vault context and usage guidelines to AI agents on connect. Server restarts on change.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableInstructions)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableInstructions = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        new Setting(containerEl)
+            .setName('Include Vault Structure')
+            .setDesc('Include top-level folder names in instructions.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.includeVaultStructure)
+                .onChange(async (value) => {
+                    this.plugin.settings.includeVaultStructure = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        new Setting(containerEl)
+            .setName('Custom Instructions')
+            .setDesc('Additional instructions appended to the agent context. Server restarts on change.')
+            .addTextArea(text => text
+                .setPlaceholder('e.g., Always use #project tag when creating notes...')
+                .setValue(this.plugin.settings.customInstructions)
+                .onChange(async (value) => {
+                    this.plugin.settings.customInstructions = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        // --- Prompts Section ---
+        containerEl.createEl('h3', { text: 'Format Guides (Prompts)' });
+
+        new Setting(containerEl)
+            .setName('Enable Prompts')
+            .setDesc('Expose Obsidian format reference guides as MCP prompts. Server restarts on change.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enablePrompts)
+                .onChange(async (value) => {
+                    this.plugin.settings.enablePrompts = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        new Setting(containerEl)
+            .setName('Obsidian Markdown Guide')
+            .setDesc('Wikilinks, embeds, callouts, frontmatter, tags.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableMarkdownGuide)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableMarkdownGuide = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        new Setting(containerEl)
+            .setName('JSON Canvas Guide')
+            .setDesc('.canvas file format reference.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableCanvasGuide)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableCanvasGuide = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        new Setting(containerEl)
+            .setName('Obsidian Bases Guide')
+            .setDesc('.base file format reference.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableBasesGuide)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableBasesGuide = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        // --- Resources Section ---
+        containerEl.createEl('h3', { text: 'Resources' });
+
+        new Setting(containerEl)
+            .setName('Enable Resources')
+            .setDesc('Expose vault content as MCP resources (notes, tags, folders, daily notes). Server restarts on change.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableResources)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableResources = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.restartServer();
+                }));
+
+        new Setting(containerEl)
+            .setName('Enable Resource Subscriptions')
+            .setDesc('Notify connected AI agents when vault files change. Requires plugin restart.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableResourceSubscriptions)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableResourceSubscriptions = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Max Resources Listed')
+            .setDesc('Maximum number of resources returned in list operations (1-5000).')
+            .addText(text => text
+                .setValue(String(this.plugin.settings.maxResourcesListed))
+                .onChange(async (value) => {
+                    const num = parseInt(value, 10);
+                    if (isNaN(num) || num < 1 || num > 5000) return;
+                    this.plugin.settings.maxResourcesListed = num;
+                    await this.plugin.saveSettings();
+                }));
+
+        // --- Smart Features Section ---
+        containerEl.createEl('h3', { text: 'Smart Features' });
+
+        new Setting(containerEl)
+            .setName('Smart Annotations')
+            .setDesc('Add contextual hints to read_note/get_active_file responses (draft status, large note warnings, broken links).')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableSmartAnnotations)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableSmartAnnotations = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        // --- Stats Section ---
         this.renderStatsSection(containerEl);
     }
 

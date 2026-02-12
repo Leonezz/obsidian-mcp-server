@@ -4,12 +4,24 @@ import moment from 'moment';
 import { getTagsFromCache } from '../utils';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
-import type { SearchResult } from '../types';
-import { MAX_SEARCH_RESULTS } from './constants';
+import type { McpLogger } from '../logging';
+import { MAX_SEARCH_RESULTS, READ_ONLY_ANNOTATIONS } from './constants';
 
-export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
+const outputSchema = {
+    results: z.array(z.object({
+        path: z.string(),
+        mtime: z.string(),
+        tags: z.array(z.string()),
+    })),
+    truncated: z.boolean(),
+    total: z.number(),
+};
+
+export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, logger: McpLogger): void {
     mcp.registerTool('search_notes', {
         description: 'Search for notes by time range and tags. Returns a list of file paths.',
+        annotations: READ_ONLY_ANNOTATIONS,
+        outputSchema,
         inputSchema: {
             start_date: z.string().optional().describe('ISO date string (YYYY-MM-DD). Filter notes modified after this date.'),
             end_date: z.string().optional().describe('ISO date string. Filter notes modified before this date.'),
@@ -38,18 +50,23 @@ export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin, tracker: 
             });
         }
 
-        const results: SearchResult[] = files.map(f => ({
+        const allResults = files.map(f => ({
             path: f.path,
             mtime: moment(f.stat.mtime).format(),
             tags: getTagsFromCache(plugin.app.metadataCache.getFileCache(f)),
         }));
 
-        const limited = results.slice(0, MAX_SEARCH_RESULTS);
-        const suffix = results.length > MAX_SEARCH_RESULTS
-            ? `\n...(and ${results.length - MAX_SEARCH_RESULTS} more)`
-            : '';
+        const limited = allResults.slice(0, MAX_SEARCH_RESULTS);
+        const truncated = allResults.length > MAX_SEARCH_RESULTS;
+        if (truncated) {
+            logger.info('search_notes: results truncated', { total: allResults.length, returned: MAX_SEARCH_RESULTS });
+        }
+
+        const structured = { results: limited, truncated, total: allResults.length };
+        const suffix = truncated ? `\n...(and ${allResults.length - MAX_SEARCH_RESULTS} more)` : '';
         return {
-            content: [{ type: 'text', text: JSON.stringify(limited, null, 2) + suffix }],
+            structuredContent: structured,
+            content: [{ type: 'text' as const, text: JSON.stringify(limited, null, 2) + suffix }],
         };
     }));
 }

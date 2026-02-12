@@ -2,12 +2,25 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
-import type { ContentSearchResult } from '../types';
-import { MAX_CONTENT_SEARCH_RESULTS, MAX_SNIPPET_LENGTH } from './constants';
+import type { McpLogger } from '../logging';
+import { MAX_CONTENT_SEARCH_RESULTS, MAX_SNIPPET_LENGTH, READ_ONLY_ANNOTATIONS } from './constants';
 
-export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
+const outputSchema = {
+    results: z.array(z.object({
+        path: z.string(),
+        matches: z.array(z.object({
+            line: z.number(),
+            text: z.string(),
+        })),
+    })),
+    truncated: z.boolean(),
+};
+
+export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, logger: McpLogger): void {
     mcp.registerTool('search_content', {
         description: 'Search for text content across all notes. Returns matching files with line-number snippets. Case-insensitive.',
+        annotations: READ_ONLY_ANNOTATIONS,
+        outputSchema,
         inputSchema: {
             query: z.string().min(1).describe('Text to search for (case-insensitive)'),
         },
@@ -16,7 +29,7 @@ export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker
             .filter(f => f.extension === 'md' && plugin.security.isAllowed(f));
 
         const queryLower = query.toLowerCase();
-        const results: ContentSearchResult[] = [];
+        const results: Array<{ path: string; matches: Array<{ line: number; text: string }> }> = [];
 
         for (const file of files) {
             if (results.length >= MAX_CONTENT_SEARCH_RESULTS) break;
@@ -39,12 +52,19 @@ export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker
             }
         }
 
-        const suffix = results.length >= MAX_CONTENT_SEARCH_RESULTS
+        const truncated = results.length >= MAX_CONTENT_SEARCH_RESULTS;
+        if (truncated) {
+            logger.info('search_content: results truncated', { returned: MAX_CONTENT_SEARCH_RESULTS });
+        }
+
+        const structured = { results, truncated };
+        const suffix = truncated
             ? `\n...(results limited to ${MAX_CONTENT_SEARCH_RESULTS} files)`
             : '';
 
         return {
-            content: [{ type: 'text', text: JSON.stringify(results, null, 2) + suffix }],
+            structuredContent: structured,
+            content: [{ type: 'text' as const, text: JSON.stringify(results, null, 2) + suffix }],
         };
     }));
 }
