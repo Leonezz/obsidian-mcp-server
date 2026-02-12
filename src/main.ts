@@ -5,6 +5,7 @@ import { SecurityManager } from './security';
 import { McpHttpServer } from './server';
 import { McpSettingTab } from './settings';
 import { StatsTracker } from './stats';
+import { ResourceSubscriptionManager } from './resources/subscriptions';
 
 export default class McpPlugin extends Plugin {
     settings: McpPluginSettings = { ...DEFAULT_SETTINGS };
@@ -12,6 +13,7 @@ export default class McpPlugin extends Plugin {
     statsTracker!: StatsTracker;
     security!: SecurityManager;
     private mcpServer!: McpHttpServer;
+    private subscriptionManager!: ResourceSubscriptionManager;
 
     async onload(): Promise<void> {
         await this.loadSettings();
@@ -29,12 +31,16 @@ export default class McpPlugin extends Plugin {
 
         this.security = new SecurityManager(this);
         this.mcpServer = new McpHttpServer(this);
+        this.subscriptionManager = new ResourceSubscriptionManager(this);
+        this.mcpServer.setSubscriptionManager(this.subscriptionManager);
         this.addSettingTab(new McpSettingTab(this.app, this));
         this.mcpServer.start();
+        this.subscriptionManager.start();
     }
 
     async onunload(): Promise<void> {
         await this.statsTracker.flush();
+        this.subscriptionManager.stop();
         this.mcpServer.stop();
     }
 

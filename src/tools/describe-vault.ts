@@ -1,12 +1,25 @@
 import { TFolder } from 'obsidian';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
-import type { VaultOverview } from '../types';
+import type { McpLogger } from '../logging';
+import { READ_ONLY_ANNOTATIONS } from './constants';
 
-export function registerDescribeVault(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker): void {
+const outputSchema = {
+    name: z.string(),
+    fileCount: z.number(),
+    folderCount: z.number(),
+    totalSizeBytes: z.number(),
+    fileTypes: z.record(z.number()),
+    tagCount: z.number(),
+};
+
+export function registerDescribeVault(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, _logger: McpLogger): void {
     mcp.registerTool('describe_vault', {
         description: 'Get an overview of the vault: name, file/folder counts, total size, file type breakdown, and tag count.',
+        annotations: READ_ONLY_ANNOTATIONS,
+        outputSchema,
     }, tracker.track('describe_vault', async () => {
         const allFiles = plugin.app.vault.getFiles();
         const files = allFiles.filter(f => plugin.security.isAllowed(f));
@@ -34,7 +47,7 @@ export function registerDescribeVault(mcp: McpServer, plugin: McpPlugin, tracker
         const tags: Record<string, number> = plugin.app.metadataCache.getTags();
         const tagCount = Object.keys(tags).filter(t => plugin.security.isTagAllowed(t)).length;
 
-        const overview: VaultOverview = {
+        const overview = {
             name: plugin.app.vault.getName(),
             fileCount: files.length,
             folderCount,
@@ -43,6 +56,9 @@ export function registerDescribeVault(mcp: McpServer, plugin: McpPlugin, tracker
             tagCount,
         };
 
-        return { content: [{ type: 'text', text: JSON.stringify(overview, null, 2) }] };
+        return {
+            structuredContent: overview,
+            content: [{ type: 'text' as const, text: JSON.stringify(overview, null, 2) }],
+        };
     }));
 }

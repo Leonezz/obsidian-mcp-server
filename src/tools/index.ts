@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type McpPlugin from '../main';
+import type { McpLogger } from '../logging';
 import { registerGetActiveFile } from './get-active-file';
 import { registerReadNote } from './read-note';
 import { registerAppendDailyNote } from './append-daily-note';
@@ -14,19 +15,19 @@ import { registerGetNoteMetadata } from './get-note-metadata';
 import { registerListRecentNotes } from './list-recent-notes';
 import { registerSearchContent } from './search-content';
 
-export function registerTools(mcp: McpServer, plugin: McpPlugin): void {
+export function registerTools(mcp: McpServer, plugin: McpPlugin, logger: McpLogger): void {
     const tracker = plugin.statsTracker;
-    registerGetActiveFile(mcp, plugin, tracker);
-    registerReadNote(mcp, plugin, tracker);
-    registerAppendDailyNote(mcp, plugin, tracker);
-    registerListFolder(mcp, plugin, tracker);
-    registerListAllTags(mcp, plugin, tracker);
-    registerSearchNotes(mcp, plugin, tracker);
-    registerDescribeVault(mcp, plugin, tracker);
-    registerCreateNote(mcp, plugin, tracker);
-    registerEditNote(mcp, plugin, tracker);
-    registerDeleteNote(mcp, plugin, tracker);
-    registerGetNoteMetadata(mcp, plugin, tracker);
-    registerListRecentNotes(mcp, plugin, tracker);
-    registerSearchContent(mcp, plugin, tracker);
+    registerGetActiveFile(mcp, plugin, tracker, logger);
+    registerReadNote(mcp, plugin, tracker, logger);
+    registerAppendDailyNote(mcp, plugin, tracker, logger);
+    registerListFolder(mcp, plugin, tracker, logger);
+    registerListAllTags(mcp, plugin, tracker, logger);
+    registerSearchNotes(mcp, plugin, tracker, logger);
+    registerDescribeVault(mcp, plugin, tracker, logger);
+    registerCreateNote(mcp, plugin, tracker, logger);
+    registerEditNote(mcp, plugin, tracker, logger);
+    registerDeleteNote(mcp, plugin, tracker, logger);
+    registerGetNoteMetadata(mcp, plugin, tracker, logger);
+    registerListRecentNotes(mcp, plugin, tracker, logger);
+    registerSearchContent(mcp, plugin, tracker, logger);
 }

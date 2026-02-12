@@ -7,6 +7,11 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { Notice } from 'obsidian';
 import type McpPlugin from './main';
 import { registerTools } from './tools';
+import { buildInstructions } from './instructions';
+import { McpLogger } from './logging';
+import { registerPrompts } from './prompts';
+import { registerResources } from './resources';
+import type { ResourceSubscriptionManager } from './resources/subscriptions';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PKG_VERSION: string = require('../package.json').version;
@@ -25,8 +30,13 @@ export class McpHttpServer {
     private httpServer: http.Server | null = null;
     private sessions = new Map<string, ActiveSession>();
     private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+    private subscriptionManager: ResourceSubscriptionManager | null = null;
 
     constructor(private plugin: McpPlugin) {}
+
+    setSubscriptionManager(manager: ResourceSubscriptionManager): void {
+        this.subscriptionManager = manager;
+    }
 
     stop(): void {
         if (this.cleanupInterval) {
@@ -205,18 +215,30 @@ export class McpHttpServer {
             },
         });
 
+        const instructions = buildInstructions(this.plugin);
+        const mcp = new McpServer({
+            name: 'Obsidian MCP',
+            version: PKG_VERSION,
+        }, instructions ? { instructions } : undefined);
+
+        const logger = new McpLogger(mcp, 'obsidian-mcp');
+        registerTools(mcp, this.plugin, logger);
+        registerPrompts(mcp, this.plugin);
+        registerResources(mcp, this.plugin);
+
+        if (this.subscriptionManager) {
+            this.subscriptionManager.registerSession(mcp);
+        }
+
         transport.onclose = () => {
             if (transport.sessionId) {
                 this.sessions.delete(transport.sessionId);
             }
+            if (this.subscriptionManager) {
+                this.subscriptionManager.unregisterSession(mcp);
+            }
         };
 
-        const mcp = new McpServer({
-            name: 'Obsidian MCP',
-            version: PKG_VERSION,
-        });
-
-        registerTools(mcp, this.plugin);
         await mcp.connect(transport);
         await transport.handleRequest(req, res, req.body);
     }
