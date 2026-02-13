@@ -195,9 +195,28 @@ export class McpHttpServer {
             return;
         }
 
-        // New session: body must contain an initialize request
-        if (!this.hasInitializeRequest(req.body)) {
-            res.status(400).json({ error: 'Bad request: expected initialization or valid session ID.' });
+        const isInitRequest = this.hasInitializeRequest(req.body);
+
+        // Stale session ID: provided but no longer exists (expired/evicted/server restarted)
+        if (sessionId && !isInitRequest) {
+            res.status(404).json({
+                error: 'Session not found — it may have expired or the server may have restarted. '
+                    + 'To recover, send a new "initialize" request (method: "initialize") without '
+                    + 'the mcp-session-id header to create a fresh session, then use the returned '
+                    + 'mcp-session-id for subsequent requests.',
+                code: 'SESSION_EXPIRED',
+            });
+            return;
+        }
+
+        // No session and not an initialize request
+        if (!isInitRequest) {
+            res.status(400).json({
+                error: 'Missing session. The MCP protocol requires a session before calling tools. '
+                    + 'Send a POST to /mcp with method "initialize" (no mcp-session-id header) first, '
+                    + 'then include the mcp-session-id from the response header in all subsequent requests.',
+                code: 'INITIALIZATION_REQUIRED',
+            });
             return;
         }
 
