@@ -14,15 +14,16 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 *   **Search:** `search_notes` filters by date/tags; `search_content` does full-text search with line-number snippets.
 *   **Quick Capture:** `append_daily_note` works with your Daily Notes settings (creates/appends correctly).
 *   **Discovery:** `list_folder`, `list_all_tags`, and `list_recent_notes` help agents explore the vault.
+*   **Session Tracking:** `list_sessions` shows active connections with client name/version and per-session tool usage stats.
 *   **Usage Statistics:** Track tool call counts (total/successful/failed) in Settings, with persistent storage.
-*   **Secure:** Uses a local **Auth Token** with timing-safe comparison to prevent unauthorized access.
+*   **Secure:** Uses a local **Auth Token** with timing-safe comparison. Authentication can be disabled for local development.
 *   **Access Control:** Blacklist paths and tags to keep sensitive notes private.
 
 ## Architecture
 
 *   **Transport:** Streamable HTTP.
 *   **Endpoint:** `http://localhost:<PORT>/mcp`
-*   **Security:** Bearer Token Authentication required.
+*   **Security:** Bearer Token Authentication (enabled by default, can be disabled in settings).
 
 ## Available Tools
 
@@ -41,6 +42,7 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 | `get_note_metadata` | Get frontmatter, tags, headings, links without full content |
 | `list_recent_notes` | Most recently modified notes, sorted newest-first (default 10, max 50) |
 | `search_content` | Case-insensitive full-text search with line-number snippets (max 50 results) |
+| `list_sessions` | List active sessions with client info and per-session tool usage stats |
 
 All tools enforce access control rules before returning data.
 
@@ -54,22 +56,31 @@ All tools enforce access control rules before returning data.
 ## Configuration
 1.  Go to **Settings -> Obsidian MCP Server**.
 2.  Note your **Server Port** (Default: `27123`).
-3.  Copy your **Auth Token**.
+3.  Copy your **Auth Token** (or disable "Require Authentication" for local development).
 4.  Optionally configure **Access Control** blacklist rules for paths and tags.
 
 ## Usage with MCP Clients
 
-The server uses **Streamable HTTP** transport on `http://localhost:<PORT>/mcp`. Configure your MCP client with:
+The server uses **Streamable HTTP** transport on `http://localhost:<PORT>/mcp`.
 
-- **URL:** `http://localhost:27123/mcp`
-- **Auth:** Bearer token (from plugin settings)
+> **Tip:** If you disabled "Require Authentication" in settings, omit the `Authorization` header / `headers` block from all configurations below.
 
-Example configuration for clients that support Streamable HTTP:
+### Claude Code
+
+Claude Code natively supports Streamable HTTP. Add the server via CLI:
+
+```bash
+claude mcp add --transport http obsidian http://localhost:27123/mcp \
+  --header "Authorization: Bearer YOUR_TOKEN"
+```
+
+Or add it to your project's `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "obsidian": {
+      "type": "http",
       "url": "http://localhost:27123/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_TOKEN"
@@ -79,27 +90,81 @@ Example configuration for clients that support Streamable HTTP:
 }
 ```
 
----
+### Cursor
 
-## 🤖 Instructions for AI Agents
-
-If you are an AI Agent trying to install this MCP server for a user, follow these steps:
-
-1.  **Verify Installation:** Check if the user has Obsidian installed and the plugin `obsidian-mcp-server` is active.
-2.  **Retrieve Credentials:** Ask the user for two things:
-    *   The **Auth Token** (from Obsidian Settings).
-    *   The **Server Port** (Default is `27123`, but check if they changed it).
-3.  **Configure Client:**
-    *   Locate the MCP Client configuration file.
-    *   Insert the following server definition (replacing placeholders):
+Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (workspace):
 
 ```json
-"obsidian": {
-  "url": "http://localhost:<USER_PORT>/mcp",
-  "headers": {
-    "Authorization": "Bearer <USER_TOKEN>"
+{
+  "mcpServers": {
+    "obsidian": {
+      "type": "streamable-http",
+      "url": "http://localhost:27123/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN"
+      }
+    }
   }
 }
 ```
 
-4.  **Restart Client:** Tell the user to restart their MCP Client.
+### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "obsidian": {
+      "serverUrl": "http://localhost:27123/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+> **Note:** Windsurf uses `"serverUrl"` instead of `"url"`.
+
+### Claude Desktop
+
+Claude Desktop does not natively support Streamable HTTP in its config file. Use the `mcp-remote` proxy:
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "obsidian": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:27123/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_TOKEN"
+      ]
+    }
+  }
+}
+```
+
+### Other Clients
+
+Any MCP client that supports Streamable HTTP can connect using:
+
+- **URL:** `http://localhost:27123/mcp`
+- **Header:** `Authorization: Bearer YOUR_TOKEN`
+
+---
+
+## Instructions for AI Agents
+
+If you are an AI Agent helping a user connect to this MCP server:
+
+1.  **Verify Installation:** Check that the user has Obsidian running with the `obsidian-mcp-server` plugin enabled.
+2.  **Retrieve Connection Info:** Ask the user for:
+    *   The **Server Port** (default `27123`).
+    *   The **Auth Token** (from Obsidian Settings), unless they have disabled authentication.
+3.  **Detect Client:** Determine which MCP client the user is running (Claude Code, Cursor, Windsurf, Claude Desktop, etc.) and use the matching configuration format from the sections above.
+4.  **Configure & Restart:** Insert the server definition into the appropriate config file and tell the user to restart their MCP client.
