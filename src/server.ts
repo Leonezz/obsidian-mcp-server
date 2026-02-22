@@ -18,6 +18,7 @@ import { recordToolCall, recordToolSuccess, recordToolFailure } from './stats';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PKG_VERSION: string = require('../package.json').version;
 
+const MAX_CLIENT_STRING_LENGTH = 128;
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_SESSIONS = 10;
@@ -65,7 +66,7 @@ export class McpHttpServer {
                 durationSeconds: Math.round((now - session.connectedAt) / 1000),
                 toolCalls: {
                     ...totals,
-                    byTool: session.toolStats,
+                    byTool: { ...session.toolStats },
                 },
             });
         }
@@ -277,17 +278,20 @@ export class McpHttpServer {
             : req.body;
         const clientInfo = (initBody?.params as Record<string, unknown>)?.clientInfo as
             { name?: string; version?: string } | undefined;
-        const clientName = clientNameHeader || clientInfo?.name || 'Unknown';
-        const clientVersion = clientInfo?.version || '';
+        const rawName = clientNameHeader || clientInfo?.name || 'Unknown';
+        const rawVersion = clientInfo?.version || '';
+        const clientName = typeof rawName === 'string' ? rawName.slice(0, MAX_CLIENT_STRING_LENGTH) : 'Unknown';
+        const clientVersion = typeof rawVersion === 'string' ? rawVersion.slice(0, MAX_CLIENT_STRING_LENGTH) : '';
 
         const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => crypto.randomUUID(),
             onsessioninitialized: (id: string) => {
+                const now = Date.now();
                 this.sessions.set(id, {
                     transport,
                     mcp,
-                    lastAccess: Date.now(),
-                    connectedAt: Date.now(),
+                    lastAccess: now,
+                    connectedAt: now,
                     clientName,
                     clientVersion,
                     toolStats: {},
