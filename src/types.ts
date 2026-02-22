@@ -2,6 +2,7 @@
 export interface McpPluginSettings {
     port: number;
     authToken: string;
+    requireAuth: boolean;
     blacklist: string;
     // Phase 1: Instructions
     enableInstructions: boolean;
@@ -23,6 +24,7 @@ export interface McpPluginSettings {
 export const DEFAULT_SETTINGS: McpPluginSettings = {
     port: 27123,
     authToken: '',
+    requireAuth: true,
     blacklist: 'Secret/\n#secret',
     enableInstructions: true,
     customInstructions: '',

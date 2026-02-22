@@ -172,6 +172,11 @@ export class McpHttpServer {
 
     private createAuthMiddleware(): (req: Request, res: Response, next: NextFunction) => void {
         return (req: Request, res: Response, next: NextFunction) => {
+            if (!this.plugin.settings.requireAuth) {
+                next();
+                return;
+            }
+
             const serverToken = this.plugin.settings.authToken;
             if (!serverToken) {
                 res.status(500).json({ error: 'Server misconfigured: no auth token.' });
