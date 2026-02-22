@@ -80,6 +80,15 @@ describe('McpPlugin', () => {
         });
     });
 
+    test('loadSettings defaults requireAuth to true for old data', async () => {
+        (plugin as any).loadData = jest.fn().mockResolvedValue({
+            settings: { port: 27123, authToken: 'tok', blacklist: '' },
+            toolStats: {},
+        });
+        await plugin.loadSettings();
+        expect(plugin.settings.requireAuth).toBe(true);
+    });
+
     test('resetStats clears stats and persists', async () => {
         const saveData = jest.fn().mockResolvedValue(undefined);
         (plugin as any).saveData = saveData;
