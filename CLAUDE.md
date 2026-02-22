@@ -42,7 +42,7 @@ Active sessions are tracked in-memory via the `ActiveSession` interface in `src/
 
 - **Express** HTTP server on configurable port (default: `27123`)
 - **Streamable HTTP transport** (`/mcp` endpoint) for MCP protocol communication
-- **Bearer token auth** middleware on all routes (token auto-generated on first load, passed via `Authorization` header or `?token=` query param)
+- **Bearer token auth** middleware on all routes (token auto-generated on first load, can be disabled via settings; passed via `Authorization` header or `?token=` query param)
 - **`@modelcontextprotocol/sdk`** for MCP server implementation
 
 ### MCP Tools Registered
@@ -92,6 +92,8 @@ esbuild configured in `esbuild.config.mjs`:
 When the plugin is running inside Obsidian, you can test it directly via curl to exercise the real MCP server. This is the best way to catch integration bugs that unit tests miss (e.g., the `StatsTracker.track()` argument-dropping bug was discovered this way).
 
 **Setup**: Get the port and auth token from Obsidian's plugin settings (default port `27123`).
+
+> **Note**: If "Require Authentication" is disabled in settings, you can omit the `Authorization` header from all requests.
 
 **1. Initialize a session**:
 ```bash
