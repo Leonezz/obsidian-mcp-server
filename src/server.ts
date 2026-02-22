@@ -12,6 +12,8 @@ import { McpLogger } from './logging';
 import { registerPrompts } from './prompts';
 import { registerResources } from './resources';
 import type { ResourceSubscriptionManager } from './resources/subscriptions';
+import type { ToolUsageStats, SessionSummary } from './types';
+import { recordToolCall, recordToolSuccess, recordToolFailure } from './stats';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PKG_VERSION: string = require('../package.json').version;
@@ -24,6 +26,10 @@ interface ActiveSession {
     transport: StreamableHTTPServerTransport;
     mcp: McpServer;
     lastAccess: number;
+    connectedAt: number;
+    clientName: string;
+    clientVersion: string;
+    toolStats: ToolUsageStats;
 }
 
 export class McpHttpServer {
@@ -36,6 +42,45 @@ export class McpHttpServer {
 
     setSubscriptionManager(manager: ResourceSubscriptionManager): void {
         this.subscriptionManager = manager;
+    }
+
+    getSessionSummaries(): SessionSummary[] {
+        const now = Date.now();
+        const summaries: SessionSummary[] = [];
+        for (const [id, session] of this.sessions) {
+            const totals = Object.values(session.toolStats).reduce(
+                (acc, s) => ({
+                    total: acc.total + s.total,
+                    successful: acc.successful + s.successful,
+                    failed: acc.failed + s.failed,
+                }),
+                { total: 0, successful: 0, failed: 0 },
+            );
+            summaries.push({
+                sessionId: id.slice(-8),
+                clientName: session.clientName,
+                clientVersion: session.clientVersion,
+                connectedAt: new Date(session.connectedAt).toISOString(),
+                lastActiveAt: new Date(session.lastAccess).toISOString(),
+                durationSeconds: Math.round((now - session.connectedAt) / 1000),
+                toolCalls: {
+                    ...totals,
+                    byTool: session.toolStats,
+                },
+            });
+        }
+        return summaries;
+    }
+
+    recordSessionToolCall(sessionId: string, toolName: string, success: boolean): void {
+        const session = this.sessions.get(sessionId);
+        if (!session) return;
+        session.toolStats = recordToolCall(session.toolStats, toolName);
+        if (success) {
+            session.toolStats = recordToolSuccess(session.toolStats, toolName);
+        } else {
+            session.toolStats = recordToolFailure(session.toolStats, toolName);
+        }
     }
 
     stop(): void {
@@ -225,10 +270,28 @@ export class McpHttpServer {
             this.evictOldestSession();
         }
 
+        // Extract client info from initialize request
+        const clientNameHeader = req.headers['x-client-name'] as string | undefined;
+        const initBody = Array.isArray(req.body)
+            ? req.body.find((msg: Record<string, unknown>) => isInitializeRequest(msg))
+            : req.body;
+        const clientInfo = (initBody?.params as Record<string, unknown>)?.clientInfo as
+            { name?: string; version?: string } | undefined;
+        const clientName = clientNameHeader || clientInfo?.name || 'Unknown';
+        const clientVersion = clientInfo?.version || '';
+
         const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => crypto.randomUUID(),
             onsessioninitialized: (id: string) => {
-                this.sessions.set(id, { transport, mcp, lastAccess: Date.now() });
+                this.sessions.set(id, {
+                    transport,
+                    mcp,
+                    lastAccess: Date.now(),
+                    connectedAt: Date.now(),
+                    clientName,
+                    clientVersion,
+                    toolStats: {},
+                });
             },
         });
 
