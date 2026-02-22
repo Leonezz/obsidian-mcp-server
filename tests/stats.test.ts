@@ -207,4 +207,26 @@ describe('StatsTracker', () => {
         expect(onToolResult).not.toHaveBeenCalled();
         await tracker.flush();
     });
+
+    test('onToolResult fires when sessionId is in first arg (no-inputSchema tools)', async () => {
+        let stats: ToolUsageStats = {};
+        const persist = jest.fn().mockResolvedValue(undefined);
+        const tracker = new StatsTracker(
+            () => stats,
+            (s) => { stats = s; },
+            persist,
+        );
+
+        const onToolResult = jest.fn();
+        tracker.setOnToolResult(onToolResult);
+
+        // Tools without inputSchema receive (extra) as the only arg
+        const handler = tracker.track('get_active_file', async () => {
+            return { content: [{ type: 'text' as const, text: 'ok' }] };
+        });
+
+        await handler({ sessionId: 'session-no-schema' } as never);
+        expect(onToolResult).toHaveBeenCalledWith('session-no-schema', 'get_active_file', true);
+        await tracker.flush();
+    });
 });

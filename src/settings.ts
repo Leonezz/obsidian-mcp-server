@@ -246,8 +246,9 @@ export class McpSettingTab extends PluginSettingTab {
     }
 
     private formatRelativeTime(isoString: string): string {
-        const diff = Date.now() - new Date(isoString).getTime();
-        const seconds = Math.floor(diff / 1000);
+        const time = new Date(isoString).getTime();
+        if (isNaN(time)) return 'unknown';
+        const seconds = Math.max(0, Math.floor((Date.now() - time) / 1000));
         if (seconds < 60) return `${seconds}s ago`;
         const minutes = Math.floor(seconds / 60);
         if (minutes < 60) return `${minutes}m ago`;

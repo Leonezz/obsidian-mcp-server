@@ -37,8 +37,10 @@ export class StatsTracker {
     track<T, A extends unknown[]>(toolName: string, handler: (...args: A) => Promise<T>): (...args: A) => Promise<T> {
         return async (...args: A) => {
             this.setStats(recordToolCall(this.getStats(), toolName));
-            const extra = args[1] as { sessionId?: string } | undefined;
-            const sessionId = extra?.sessionId;
+            // MCP SDK passes (args, extra) when inputSchema is defined,
+            // but (extra) when no inputSchema — check both positions
+            const sessionId = (args[1] as { sessionId?: string } | undefined)?.sessionId
+                ?? (args[0] as { sessionId?: string } | undefined)?.sessionId;
             try {
                 const result = await handler(...args);
                 this.setStats(recordToolSuccess(this.getStats(), toolName));
