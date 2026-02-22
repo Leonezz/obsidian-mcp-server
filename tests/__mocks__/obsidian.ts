@@ -47,6 +47,7 @@ export class Setting {
     setDesc(_desc: string) { return this; }
     addText(_cb: any) { return this; }
     addTextArea(_cb: any) { return this; }
+    addToggle(_cb: any) { return this; }
     addButton(_cb: any) { return this; }
     addExtraButton(_cb: any) { return this; }
 }

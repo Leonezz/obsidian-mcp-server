@@ -34,29 +34,52 @@ export class McpSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Auth Token')
-            .setDesc('Required for connecting. Use the Authorization header: Bearer <token>')
-            .addText(text => text
-                .setValue(this.plugin.settings.authToken)
-                .setDisabled(true))
-            .addExtraButton(btn => btn
-                .setIcon('copy')
-                .onClick(() => {
-                    navigator.clipboard.writeText(this.plugin.settings.authToken);
-                    new Notice('Token copied');
-                }));
-
-        new Setting(containerEl)
-            .setName('Regenerate Token')
-            .addButton(btn => btn
-                .setButtonText('Regenerate')
-                .setWarning()
-                .onClick(async () => {
-                    this.plugin.settings.authToken = crypto.randomBytes(16).toString('hex');
+            .setName('Require Authentication')
+            .setDesc('Require Bearer token for all connections. Disable for easier local development.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.requireAuth)
+                .onChange(async (value) => {
+                    if (!value) {
+                        const confirmed = window.confirm(
+                            'Disabling auth allows any local process to access your vault via the MCP server. Continue?'
+                        );
+                        if (!confirmed) {
+                            toggle.setValue(true);
+                            return;
+                        }
+                    }
+                    this.plugin.settings.requireAuth = value;
                     await this.plugin.saveSettings();
                     this.display();
                     this.plugin.restartServer();
                 }));
+
+        if (this.plugin.settings.requireAuth) {
+            new Setting(containerEl)
+                .setName('Auth Token')
+                .setDesc('Required for connecting. Use the Authorization header: Bearer <token>')
+                .addText(text => text
+                    .setValue(this.plugin.settings.authToken)
+                    .setDisabled(true))
+                .addExtraButton(btn => btn
+                    .setIcon('copy')
+                    .onClick(() => {
+                        navigator.clipboard.writeText(this.plugin.settings.authToken);
+                        new Notice('Token copied');
+                    }));
+
+            new Setting(containerEl)
+                .setName('Regenerate Token')
+                .addButton(btn => btn
+                    .setButtonText('Regenerate')
+                    .setWarning()
+                    .onClick(async () => {
+                        this.plugin.settings.authToken = crypto.randomBytes(16).toString('hex');
+                        await this.plugin.saveSettings();
+                        this.display();
+                        this.plugin.restartServer();
+                    }));
+        }
 
         new Setting(containerEl)
             .setName('Access Control: Blacklist')
