@@ -126,4 +126,85 @@ describe('StatsTracker', () => {
         await tracker.flush();
         expect(persist).not.toHaveBeenCalled();
     });
+
+    test('onToolResult callback fires with sessionId on success', async () => {
+        let stats: ToolUsageStats = {};
+        const persist = jest.fn().mockResolvedValue(undefined);
+        const tracker = new StatsTracker(
+            () => stats,
+            (s) => { stats = s; },
+            persist,
+        );
+
+        const onToolResult = jest.fn();
+        tracker.setOnToolResult(onToolResult);
+
+        const handler = tracker.track('read_note', async (_params: { path: string }) => {
+            return { content: [{ type: 'text' as const, text: 'ok' }] };
+        });
+
+        await handler({ path: 'test.md' }, { sessionId: 'session-123' } as never);
+        expect(onToolResult).toHaveBeenCalledWith('session-123', 'read_note', true);
+        await tracker.flush();
+    });
+
+    test('onToolResult callback fires with sessionId on failure', async () => {
+        let stats: ToolUsageStats = {};
+        const persist = jest.fn().mockResolvedValue(undefined);
+        const tracker = new StatsTracker(
+            () => stats,
+            (s) => { stats = s; },
+            persist,
+        );
+
+        const onToolResult = jest.fn();
+        tracker.setOnToolResult(onToolResult);
+
+        const handler = tracker.track('fail_tool', async () => {
+            throw new Error('boom');
+        });
+
+        await expect(handler({}, { sessionId: 'session-456' } as never)).rejects.toThrow('boom');
+        expect(onToolResult).toHaveBeenCalledWith('session-456', 'fail_tool', false);
+        await tracker.flush();
+    });
+
+    test('track works without onToolResult callback', async () => {
+        let stats: ToolUsageStats = {};
+        const persist = jest.fn().mockResolvedValue(undefined);
+        const tracker = new StatsTracker(
+            () => stats,
+            (s) => { stats = s; },
+            persist,
+        );
+
+        const handler = tracker.track('tool', async () => {
+            return { content: [] };
+        });
+
+        await handler({}, { sessionId: 'session-789' } as never);
+        expect(stats.tool.successful).toBe(1);
+        await tracker.flush();
+    });
+
+    test('onToolResult not called when no sessionId in extra', async () => {
+        let stats: ToolUsageStats = {};
+        const persist = jest.fn().mockResolvedValue(undefined);
+        const tracker = new StatsTracker(
+            () => stats,
+            (s) => { stats = s; },
+            persist,
+        );
+
+        const onToolResult = jest.fn();
+        tracker.setOnToolResult(onToolResult);
+
+        const handler = tracker.track('tool', async () => {
+            return { content: [] };
+        });
+
+        await handler();
+        expect(onToolResult).not.toHaveBeenCalled();
+        await tracker.flush();
+    });
 });
