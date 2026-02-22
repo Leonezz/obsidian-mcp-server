@@ -12,7 +12,7 @@ export default class McpPlugin extends Plugin {
     toolStats: ToolUsageStats = {};
     statsTracker!: StatsTracker;
     security!: SecurityManager;
-    private mcpServer!: McpHttpServer;
+    mcpServer!: McpHttpServer;
     private subscriptionManager!: ResourceSubscriptionManager;
 
     async onload(): Promise<void> {
