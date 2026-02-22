@@ -12,7 +12,7 @@ export default class McpPlugin extends Plugin {
     toolStats: ToolUsageStats = {};
     statsTracker!: StatsTracker;
     security!: SecurityManager;
-    private mcpServer!: McpHttpServer;
+    mcpServer!: McpHttpServer;
     private subscriptionManager!: ResourceSubscriptionManager;
 
     async onload(): Promise<void> {
@@ -31,6 +31,9 @@ export default class McpPlugin extends Plugin {
 
         this.security = new SecurityManager(this);
         this.mcpServer = new McpHttpServer(this);
+        this.statsTracker.setOnToolResult((sessionId, toolName, success) => {
+            this.mcpServer.recordSessionToolCall(sessionId, toolName, success);
+        });
         this.subscriptionManager = new ResourceSubscriptionManager(this);
         this.mcpServer.setSubscriptionManager(this.subscriptionManager);
         this.addSettingTab(new McpSettingTab(this.app, this));

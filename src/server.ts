@@ -12,10 +12,13 @@ import { McpLogger } from './logging';
 import { registerPrompts } from './prompts';
 import { registerResources } from './resources';
 import type { ResourceSubscriptionManager } from './resources/subscriptions';
+import type { ToolUsageStats, SessionSummary } from './types';
+import { recordToolCall, recordToolSuccess, recordToolFailure } from './stats';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PKG_VERSION: string = require('../package.json').version;
 
+const MAX_CLIENT_STRING_LENGTH = 128;
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_SESSIONS = 10;
@@ -24,6 +27,10 @@ interface ActiveSession {
     transport: StreamableHTTPServerTransport;
     mcp: McpServer;
     lastAccess: number;
+    connectedAt: number;
+    clientName: string;
+    clientVersion: string;
+    toolStats: ToolUsageStats;
 }
 
 export class McpHttpServer {
@@ -36,6 +43,45 @@ export class McpHttpServer {
 
     setSubscriptionManager(manager: ResourceSubscriptionManager): void {
         this.subscriptionManager = manager;
+    }
+
+    getSessionSummaries(): SessionSummary[] {
+        const now = Date.now();
+        const summaries: SessionSummary[] = [];
+        for (const [id, session] of this.sessions) {
+            const totals = Object.values(session.toolStats).reduce(
+                (acc, s) => ({
+                    total: acc.total + s.total,
+                    successful: acc.successful + s.successful,
+                    failed: acc.failed + s.failed,
+                }),
+                { total: 0, successful: 0, failed: 0 },
+            );
+            summaries.push({
+                sessionId: id.slice(-8),
+                clientName: session.clientName,
+                clientVersion: session.clientVersion,
+                connectedAt: new Date(session.connectedAt).toISOString(),
+                lastActiveAt: new Date(session.lastAccess).toISOString(),
+                durationSeconds: Math.round((now - session.connectedAt) / 1000),
+                toolCalls: {
+                    ...totals,
+                    byTool: { ...session.toolStats },
+                },
+            });
+        }
+        return summaries;
+    }
+
+    recordSessionToolCall(sessionId: string, toolName: string, success: boolean): void {
+        const session = this.sessions.get(sessionId);
+        if (!session) return;
+        session.toolStats = recordToolCall(session.toolStats, toolName);
+        if (success) {
+            session.toolStats = recordToolSuccess(session.toolStats, toolName);
+        } else {
+            session.toolStats = recordToolFailure(session.toolStats, toolName);
+        }
     }
 
     stop(): void {
@@ -225,10 +271,31 @@ export class McpHttpServer {
             this.evictOldestSession();
         }
 
+        // Extract client info from initialize request
+        const clientNameHeader = req.headers['x-client-name'] as string | undefined;
+        const initBody = Array.isArray(req.body)
+            ? req.body.find((msg: Record<string, unknown>) => isInitializeRequest(msg))
+            : req.body;
+        const clientInfo = (initBody?.params as Record<string, unknown>)?.clientInfo as
+            { name?: string; version?: string } | undefined;
+        const rawName = clientNameHeader || clientInfo?.name || 'Unknown';
+        const rawVersion = clientInfo?.version || '';
+        const clientName = typeof rawName === 'string' ? rawName.slice(0, MAX_CLIENT_STRING_LENGTH) : 'Unknown';
+        const clientVersion = typeof rawVersion === 'string' ? rawVersion.slice(0, MAX_CLIENT_STRING_LENGTH) : '';
+
         const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => crypto.randomUUID(),
             onsessioninitialized: (id: string) => {
-                this.sessions.set(id, { transport, mcp, lastAccess: Date.now() });
+                const now = Date.now();
+                this.sessions.set(id, {
+                    transport,
+                    mcp,
+                    lastAccess: now,
+                    connectedAt: now,
+                    clientName,
+                    clientVersion,
+                    toolStats: {},
+                });
             },
         });
 

@@ -202,8 +202,58 @@ export class McpSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        // --- Sessions Section ---
+        this.renderSessionsSection(containerEl);
+
         // --- Stats Section ---
         this.renderStatsSection(containerEl);
+    }
+
+    private renderSessionsSection(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: 'Active Sessions' });
+
+        const summaries = this.plugin.mcpServer.getSessionSummaries();
+
+        if (summaries.length === 0) {
+            containerEl.createEl('p', {
+                text: 'No active sessions.',
+                cls: 'mcp-stats-empty',
+            });
+            return;
+        }
+
+        const table = containerEl.createEl('table', { cls: 'mcp-stats-table' });
+        const thead = table.createEl('thead');
+        const headerRow = thead.createEl('tr');
+        headerRow.createEl('th', { text: 'Client' });
+        headerRow.createEl('th', { text: 'Session ID' });
+        headerRow.createEl('th', { text: 'Connected' });
+        headerRow.createEl('th', { text: 'Last Active' });
+        headerRow.createEl('th', { text: 'Tool Calls' });
+
+        const tbody = table.createEl('tbody');
+        for (const s of summaries) {
+            const row = tbody.createEl('tr');
+            const clientLabel = s.clientVersion
+                ? `${s.clientName} (${s.clientVersion})`
+                : s.clientName;
+            row.createEl('td', { text: clientLabel });
+            row.createEl('td', { text: `...${s.sessionId}` });
+            row.createEl('td', { text: this.formatRelativeTime(s.connectedAt) });
+            row.createEl('td', { text: this.formatRelativeTime(s.lastActiveAt) });
+            row.createEl('td', { text: String(s.toolCalls.total) });
+        }
+    }
+
+    private formatRelativeTime(isoString: string): string {
+        const time = new Date(isoString).getTime();
+        if (isNaN(time)) return 'unknown';
+        const seconds = Math.max(0, Math.floor((Date.now() - time) / 1000));
+        if (seconds < 60) return `${seconds}s ago`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        return `${hours}h ago`;
     }
 
     private renderStatsSection(containerEl: HTMLElement): void {

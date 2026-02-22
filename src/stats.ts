@@ -22,23 +22,35 @@ export class StatsTracker {
     private dirty = false;
     private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+    private onToolResult: ((sessionId: string, toolName: string, success: boolean) => void) | null = null;
+
     constructor(
         private getStats: () => ToolUsageStats,
         private setStats: (stats: ToolUsageStats) => void,
         private persist: () => Promise<void>,
     ) {}
 
+    setOnToolResult(callback: (sessionId: string, toolName: string, success: boolean) => void): void {
+        this.onToolResult = callback;
+    }
+
     track<T, A extends unknown[]>(toolName: string, handler: (...args: A) => Promise<T>): (...args: A) => Promise<T> {
         return async (...args: A) => {
             this.setStats(recordToolCall(this.getStats(), toolName));
+            // MCP SDK passes (args, extra) when inputSchema is defined,
+            // but (extra) when no inputSchema — check both positions
+            const sessionId = (args[1] as { sessionId?: string } | undefined)?.sessionId
+                ?? (args[0] as { sessionId?: string } | undefined)?.sessionId;
             try {
                 const result = await handler(...args);
                 this.setStats(recordToolSuccess(this.getStats(), toolName));
                 this.scheduleSave();
+                if (sessionId) this.onToolResult?.(sessionId, toolName, true);
                 return result;
             } catch (err) {
                 this.setStats(recordToolFailure(this.getStats(), toolName));
                 this.scheduleSave();
+                if (sessionId) this.onToolResult?.(sessionId, toolName, false);
                 throw err;
             }
         };

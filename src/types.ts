@@ -98,3 +98,18 @@ export interface ContentSearchResult {
     path: string;
     matches: Array<{ line: number; text: string }>;
 }
+
+export interface SessionSummary {
+    sessionId: string;
+    clientName: string;
+    clientVersion: string;
+    connectedAt: string;
+    lastActiveAt: string;
+    durationSeconds: number;
+    toolCalls: {
+        total: number;
+        successful: number;
+        failed: number;
+        byTool: ToolUsageStats;
+    };
+}
