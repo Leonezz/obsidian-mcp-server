@@ -24,6 +24,14 @@ export function registerCreateNote(mcp: McpServer, plugin: McpPlugin, tracker: S
         if (existing) {
             return { content: [{ type: 'text', text: `File already exists at ${path}` }], isError: true };
         }
+        const parentDir = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : null;
+        if (parentDir) {
+            try {
+                await plugin.app.vault.createFolder(parentDir);
+            } catch {
+                // folder may already exist — safe to ignore
+            }
+        }
         await plugin.app.vault.create(path, content);
         return { content: [{ type: 'text', text: `Created ${path}` }] };
     }));
