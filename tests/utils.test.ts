@@ -1,4 +1,4 @@
-import { normalizePath, getTagsFromCache } from '../src/utils';
+import { normalizePath, getTagsFromCache, getMimeType, isImageMime } from '../src/utils';
 
 describe('normalizePath', () => {
     test('removes .. segments', () => {
@@ -18,6 +18,44 @@ describe('normalizePath', () => {
     });
     test('handles empty string', () => {
         expect(normalizePath('')).toBe('');
+    });
+});
+
+describe('getMimeType', () => {
+    test('returns correct MIME for known image extensions', () => {
+        expect(getMimeType('png')).toBe('image/png');
+        expect(getMimeType('jpg')).toBe('image/jpeg');
+        expect(getMimeType('jpeg')).toBe('image/jpeg');
+        expect(getMimeType('gif')).toBe('image/gif');
+        expect(getMimeType('webp')).toBe('image/webp');
+        expect(getMimeType('svg')).toBe('image/svg+xml');
+    });
+    test('returns correct MIME for non-image extensions', () => {
+        expect(getMimeType('pdf')).toBe('application/pdf');
+        expect(getMimeType('mp3')).toBe('audio/mpeg');
+        expect(getMimeType('mp4')).toBe('video/mp4');
+        expect(getMimeType('zip')).toBe('application/zip');
+    });
+    test('returns application/octet-stream for unknown extensions', () => {
+        expect(getMimeType('xyz')).toBe('application/octet-stream');
+        expect(getMimeType('bin')).toBe('application/octet-stream');
+    });
+    test('is case-insensitive', () => {
+        expect(getMimeType('PNG')).toBe('image/png');
+        expect(getMimeType('Jpg')).toBe('image/jpeg');
+    });
+});
+
+describe('isImageMime', () => {
+    test('returns true for image MIME types', () => {
+        expect(isImageMime('image/png')).toBe(true);
+        expect(isImageMime('image/jpeg')).toBe(true);
+        expect(isImageMime('image/svg+xml')).toBe(true);
+    });
+    test('returns false for non-image MIME types', () => {
+        expect(isImageMime('application/pdf')).toBe(false);
+        expect(isImageMime('audio/mpeg')).toBe(false);
+        expect(isImageMime('application/octet-stream')).toBe(false);
     });
 });
 

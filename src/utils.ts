@@ -1,5 +1,21 @@
 import { CachedMetadata } from 'obsidian';
 
+const MIME_TYPES: Record<string, string> = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp',
+    bmp: 'image/bmp', ico: 'image/x-icon', tiff: 'image/tiff',
+    pdf: 'application/pdf', mp3: 'audio/mpeg', wav: 'audio/wav',
+    mp4: 'video/mp4', zip: 'application/zip',
+};
+
+export function getMimeType(extension: string): string {
+    return MIME_TYPES[extension.toLowerCase()] ?? 'application/octet-stream';
+}
+
+export function isImageMime(mimeType: string): boolean {
+    return mimeType.startsWith('image/');
+}
+
 export function normalizePath(p: string): string {
     const segments = p.split('/').filter(s => s !== '.' && s !== '');
     const resolved: string[] = [];

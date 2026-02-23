@@ -20,6 +20,8 @@ import { registerAppendNote } from './append-note';
 import { registerCreateFolder } from './create-folder';
 import { registerRenameNote } from './rename-note';
 import { registerPatchNote } from './patch-note';
+import { registerReadAttachment } from './read-attachment';
+import { registerAddAttachment } from './add-attachment';
 
 export function registerTools(mcp: McpServer, plugin: McpPlugin, logger: McpLogger): void {
     const tracker = plugin.statsTracker;
@@ -42,4 +44,6 @@ export function registerTools(mcp: McpServer, plugin: McpPlugin, logger: McpLogg
     registerCreateFolder(mcp, plugin, tracker, logger);
     registerRenameNote(mcp, plugin, tracker, logger);
     registerPatchNote(mcp, plugin, tracker, logger);
+    registerReadAttachment(mcp, plugin, tracker, logger);
+    registerAddAttachment(mcp, plugin, tracker, logger);
 }

@@ -10,6 +10,7 @@ export const MAX_SNIPPET_LENGTH = 200;
 export const MAX_RECENT_NOTES = 50;
 export const MAX_BACKLINKS = 50;
 export const MAX_BACKLINK_CONTEXT_LENGTH = 200;
+export const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB base64 input limit
 export const STATS_SAVE_DEBOUNCE_MS = 5000;
 
 export const READ_ONLY_ANNOTATIONS: ToolAnnotations = {
