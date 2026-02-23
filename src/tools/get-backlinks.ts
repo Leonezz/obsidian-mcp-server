@@ -4,10 +4,7 @@ import { z } from 'zod';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import type { McpLogger } from '../logging';
-import { ACCESS_DENIED_MSG, READ_ONLY_ANNOTATIONS } from './constants';
-
-const MAX_BACKLINKS = 50;
-const MAX_CONTEXT_LENGTH = 200;
+import { ACCESS_DENIED_MSG, MAX_BACKLINKS, MAX_BACKLINK_CONTEXT_LENGTH, READ_ONLY_ANNOTATIONS } from './constants';
 
 interface BacklinkEntry {
     source: string;
@@ -64,14 +61,14 @@ export function registerGetBacklinks(mcp: McpServer, plugin: McpPlugin, tracker:
                 for (const line of lines) {
                     if (line.includes(`[[${targetName}]]`) || line.includes(`[[${targetName}|`)) {
                         context = line.trim();
-                        if (context.length > MAX_CONTEXT_LENGTH) {
-                            context = context.substring(0, MAX_CONTEXT_LENGTH) + '...';
+                        if (context.length > MAX_BACKLINK_CONTEXT_LENGTH) {
+                            context = context.substring(0, MAX_BACKLINK_CONTEXT_LENGTH) + '...';
                         }
                         break;
                     }
                 }
-            } catch {
-                // If we can't read the file, just skip context
+            } catch (err) {
+                logger.warning('get_backlinks: failed to read source file for context', { sourcePath, error: String(err) });
             }
 
             backlinks.push({ source: sourcePath, context });
