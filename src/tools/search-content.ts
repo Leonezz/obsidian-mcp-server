@@ -13,6 +13,8 @@ const outputSchema = {
             line: z.number(),
             text: z.string(),
         })),
+        frontmatter: z.record(z.unknown()).optional(),
+        tags: z.array(z.string()).optional(),
     })),
     truncated: z.boolean(),
 };
