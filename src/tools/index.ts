@@ -16,6 +16,8 @@ import { registerListRecentNotes } from './list-recent-notes';
 import { registerSearchContent } from './search-content';
 import { registerListSessions } from './list-sessions';
 import { registerGetBacklinks } from './get-backlinks';
+import { registerAppendNote } from './append-note';
+import { registerCreateFolder } from './create-folder';
 
 export function registerTools(mcp: McpServer, plugin: McpPlugin, logger: McpLogger): void {
     const tracker = plugin.statsTracker;
@@ -34,4 +36,6 @@ export function registerTools(mcp: McpServer, plugin: McpPlugin, logger: McpLogg
     registerSearchContent(mcp, plugin, tracker, logger);
     registerListSessions(mcp, plugin, tracker, logger);
     registerGetBacklinks(mcp, plugin, tracker, logger);
+    registerAppendNote(mcp, plugin, tracker, logger);
+    registerCreateFolder(mcp, plugin, tracker, logger);
 }
