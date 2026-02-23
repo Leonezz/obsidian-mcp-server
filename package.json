@@ -19,6 +19,7 @@
   "author": "zhuwenq",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.39.3",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^16.11.6",
