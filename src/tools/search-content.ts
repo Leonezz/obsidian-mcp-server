@@ -4,7 +4,7 @@ import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import type { McpLogger } from '../logging';
 import { ACCESS_DENIED_MSG, MAX_CONTENT_SEARCH_RESULTS, MAX_SNIPPET_LENGTH, READ_ONLY_ANNOTATIONS } from './constants';
-import { normalizePath } from '../utils';
+import { getTagsFromCache, normalizePath } from '../utils';
 
 const outputSchema = {
     results: z.array(z.object({
@@ -13,21 +13,24 @@ const outputSchema = {
             line: z.number(),
             text: z.string(),
         })),
+        frontmatter: z.record(z.unknown()).optional(),
+        tags: z.array(z.string()).optional(),
     })),
     truncated: z.boolean(),
 };
 
 export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, logger: McpLogger): void {
     mcp.registerTool('search_content', {
-        description: 'Search for text content across all notes. Returns matching files with line-number snippets. Case-insensitive by default; set regex=true to use a regular expression pattern. Optionally restrict to a folder.',
+        description: 'Search for text content across all notes. Returns matching files with line-number snippets. Case-insensitive by default; set regex=true to use a regular expression pattern. Optionally restrict to a folder. Set include_metadata=true to attach frontmatter and tags to each result.',
         annotations: READ_ONLY_ANNOTATIONS,
         outputSchema,
         inputSchema: {
             query: z.string().min(1).describe('Text to search for (case-insensitive), or a regex pattern when regex=true'),
             regex: z.boolean().default(false).describe('Treat query as a regular expression pattern'),
             folder: z.string().optional().describe("Restrict search to notes under this folder (e.g. 'Projects/')"),
+            include_metadata: z.boolean().default(false).describe('Include frontmatter fields and tags in each result'),
         },
-    }, tracker.track('search_content', async ({ query, regex, folder }) => {
+    }, tracker.track('search_content', async ({ query, regex, folder, include_metadata }) => {
         let pattern: RegExp | null = null;
         if (regex) {
             try {
@@ -52,7 +55,12 @@ export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker
             });
 
         const queryLower = query.toLowerCase();
-        const results: Array<{ path: string; matches: Array<{ line: number; text: string }> }> = [];
+        const results: Array<{
+            path: string;
+            matches: Array<{ line: number; text: string }>;
+            frontmatter?: Record<string, unknown>;
+            tags?: string[];
+        }> = [];
 
         for (const file of files) {
             if (results.length >= MAX_CONTENT_SEARCH_RESULTS) break;
@@ -75,7 +83,13 @@ export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker
             }
 
             if (matches.length > 0) {
-                results.push({ path: file.path, matches });
+                const entry: typeof results[number] = { path: file.path, matches };
+                if (include_metadata) {
+                    const cache = plugin.app.metadataCache.getFileCache(file);
+                    entry.frontmatter = cache?.frontmatter ? { ...cache.frontmatter } : {};
+                    entry.tags = getTagsFromCache(cache);
+                }
+                results.push(entry);
             }
         }
 
