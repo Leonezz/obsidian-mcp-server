@@ -8,6 +8,8 @@ export const MAX_CREATE_LENGTH = 100000;
 export const MAX_CONTENT_SEARCH_RESULTS = 50;
 export const MAX_SNIPPET_LENGTH = 200;
 export const MAX_RECENT_NOTES = 50;
+export const MAX_BACKLINKS = 50;
+export const MAX_BACKLINK_CONTEXT_LENGTH = 200;
 export const STATS_SAVE_DEBOUNCE_MS = 5000;
 
 export const READ_ONLY_ANNOTATIONS: ToolAnnotations = {
