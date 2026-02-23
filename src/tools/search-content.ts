@@ -3,7 +3,8 @@ import { z } from 'zod';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import type { McpLogger } from '../logging';
-import { MAX_CONTENT_SEARCH_RESULTS, MAX_SNIPPET_LENGTH, READ_ONLY_ANNOTATIONS } from './constants';
+import { ACCESS_DENIED_MSG, MAX_CONTENT_SEARCH_RESULTS, MAX_SNIPPET_LENGTH, READ_ONLY_ANNOTATIONS } from './constants';
+import { normalizePath } from '../utils';
 
 const outputSchema = {
     results: z.array(z.object({
@@ -18,14 +19,15 @@ const outputSchema = {
 
 export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, logger: McpLogger): void {
     mcp.registerTool('search_content', {
-        description: 'Search for text content across all notes. Returns matching files with line-number snippets. Case-insensitive by default; set regex=true to use a regular expression pattern.',
+        description: 'Search for text content across all notes. Returns matching files with line-number snippets. Case-insensitive by default; set regex=true to use a regular expression pattern. Optionally restrict to a folder.',
         annotations: READ_ONLY_ANNOTATIONS,
         outputSchema,
         inputSchema: {
             query: z.string().min(1).describe('Text to search for (case-insensitive), or a regex pattern when regex=true'),
             regex: z.boolean().default(false).describe('Treat query as a regular expression pattern'),
+            folder: z.string().optional().describe("Restrict search to notes under this folder (e.g. 'Projects/')"),
         },
-    }, tracker.track('search_content', async ({ query, regex }) => {
+    }, tracker.track('search_content', async ({ query, regex, folder }) => {
         let pattern: RegExp | null = null;
         if (regex) {
             try {
@@ -35,8 +37,19 @@ export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker
             }
         }
 
+        if (folder && !plugin.security.isAllowed(folder)) {
+            logger.warning('search_content: access denied on folder', { folder });
+            return { content: [{ type: 'text' as const, text: ACCESS_DENIED_MSG }], isError: true };
+        }
+
+        const normalizedFolder = folder ? normalizePath(folder) : null;
         const files = plugin.app.vault.getFiles()
-            .filter(f => f.extension === 'md' && plugin.security.isAllowed(f));
+            .filter(f => {
+                if (f.extension !== 'md') return false;
+                if (!plugin.security.isAllowed(f)) return false;
+                if (normalizedFolder && !normalizePath(f.path).startsWith(normalizedFolder)) return false;
+                return true;
+            });
 
         const queryLower = query.toLowerCase();
         const results: Array<{ path: string; matches: Array<{ line: number; text: string }> }> = [];
