@@ -18,13 +18,23 @@ const outputSchema = {
 
 export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, logger: McpLogger): void {
     mcp.registerTool('search_content', {
-        description: 'Search for text content across all notes. Returns matching files with line-number snippets. Case-insensitive.',
+        description: 'Search for text content across all notes. Returns matching files with line-number snippets. Case-insensitive by default; set regex=true to use a regular expression pattern.',
         annotations: READ_ONLY_ANNOTATIONS,
         outputSchema,
         inputSchema: {
-            query: z.string().min(1).describe('Text to search for (case-insensitive)'),
+            query: z.string().min(1).describe('Text to search for (case-insensitive), or a regex pattern when regex=true'),
+            regex: z.boolean().default(false).describe('Treat query as a regular expression pattern'),
         },
-    }, tracker.track('search_content', async ({ query }) => {
+    }, tracker.track('search_content', async ({ query, regex }) => {
+        let pattern: RegExp | null = null;
+        if (regex) {
+            try {
+                pattern = new RegExp(query, 'i');
+            } catch (err) {
+                return { content: [{ type: 'text' as const, text: `Invalid regex: ${String(err)}` }], isError: true };
+            }
+        }
+
         const files = plugin.app.vault.getFiles()
             .filter(f => f.extension === 'md' && plugin.security.isAllowed(f));
 
@@ -39,7 +49,11 @@ export function registerSearchContent(mcp: McpServer, plugin: McpPlugin, tracker
             const matches: Array<{ line: number; text: string }> = [];
 
             for (let i = 0; i < lines.length; i++) {
-                if (lines[i].toLowerCase().includes(queryLower)) {
+                const isMatch = pattern
+                    ? pattern.test(lines[i])
+                    : lines[i].toLowerCase().includes(queryLower);
+
+                if (isMatch) {
                     const snippet = lines[i].length > MAX_SNIPPET_LENGTH
                         ? lines[i].substring(0, MAX_SNIPPET_LENGTH) + '...'
                         : lines[i];
