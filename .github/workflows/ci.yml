@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   lint:
@@ -15,8 +15,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: npm install
-      - run: npm run lint
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - run: pnpm install
+      - run: pnpm run lint
 
   test:
     runs-on: ubuntu-latest
@@ -26,5 +30,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: npm install
-      - run: npm test
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - run: pnpm install
+      - run: pnpm test
