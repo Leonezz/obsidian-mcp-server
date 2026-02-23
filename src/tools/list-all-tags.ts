@@ -6,7 +6,7 @@ import type { McpLogger } from '../logging';
 import { READ_ONLY_ANNOTATIONS } from './constants';
 
 const outputSchema = {
-    tags: z.record(z.number()),
+    tags: z.record(z.string(), z.number()),
 };
 
 export function registerListAllTags(mcp: McpServer, plugin: McpPlugin, tracker: StatsTracker, _logger: McpLogger): void {

@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Obsidian MCP Server is an **Obsidian desktop plugin** that runs a local Model Context Protocol (MCP) server inside Obsidian. External AI tools (Claude Desktop, Cursor, CLI agents) connect via Streamable HTTP to read vault content and perform actions. The plugin is desktop-only and requires Bearer token authentication.
+Obsidian MCP Server is an **Obsidian desktop plugin** that runs a local Model Context Protocol (MCP) server inside Obsidian. External AI tools (Claude Desktop, Cursor, CLI agents) connect via Streamable HTTP to read vault content and perform actions. The plugin is desktop-only. Bearer token authentication is enabled by default but can be disabled in settings.
 
 ## Build & Development Commands
 
 ```bash
-npm run dev        # Watch mode (esbuild, outputs main.js)
-npm run build      # Production build (esbuild, outputs main.js)
-npm run lint       # ESLint on src/**/*.ts
-npm test           # Jest tests
+pnpm run dev       # Watch mode (esbuild, outputs main.js)
+pnpm run build     # Production build (esbuild, outputs main.js)
+pnpm run lint      # ESLint on src/**/*.ts
+pnpm test          # Jest tests
 ```
 
 The build output is `main.js` in the project root (not a dist/ folder). This is the file Obsidian loads as the plugin entry point.
@@ -51,17 +51,24 @@ Active sessions are tracked in-memory via the `ActiveSession` interface in `src/
 |------|---------|
 | `get_active_file` | Returns content + metadata of the currently open note |
 | `read_note` | Reads a specific note by vault-relative path |
-| `append_daily_note` | Appends text to today's daily note (uses `obsidian-daily-notes-interface`) |
-| `list_folder` | Lists files/folders in a directory |
-| `list_all_tags` | Lists all tags in the vault with counts |
-| `search_notes` | Filters notes by date range and/or tags (max 100 results) |
-| `describe_vault` | Vault overview: name, file/folder counts, total size, file type breakdown, tag count |
-| `create_note` | Create note at path with content. Prevents overwrite. Max 100K chars |
+| `create_note` | Create note at path with content. Auto-creates parent folders. Prevents overwrite. Max 100K chars |
 | `edit_note` | Replace entire content of existing note. Max 100K chars |
+| `append_note` | Append or prepend text to an existing note |
+| `patch_note` | Find-and-replace edit (first occurrence of old_string → new_string) |
+| `rename_note` | Rename or move a note; Obsidian auto-updates wikilinks |
 | `delete_note` | Delete note by path |
+| `read_attachment` | Read binary attachment. Images → MCP ImageContent (AI can see). Non-images → metadata |
+| `add_attachment` | Save base64-encoded binary to vault (explicit folder or Obsidian's attachment folder) |
 | `get_note_metadata` | Get frontmatter, tags, headings, links without full content |
+| `get_backlinks` | Get incoming links (backlinks) to a note with surrounding context |
+| `list_folder` | List files/folders with sorting, file type filtering, and recursive listing |
+| `list_all_tags` | Lists all tags in the vault with counts |
 | `list_recent_notes` | N most recently modified .md files, sorted newest-first (default 10, max 50) |
-| `search_content` | Case-insensitive full-text search with line-number snippets. Max 50 results |
+| `create_folder` | Create a folder at path (with intermediate parents, like mkdir -p) |
+| `search_notes` | Filter notes by date range, tags, and/or frontmatter fields (max 100 results) |
+| `search_content` | Full-text or regex search with line-number snippets, optional folder scope and metadata. Max 50 results |
+| `describe_vault` | Vault overview: name, file/folder counts, total size, file type breakdown, tag count |
+| `append_daily_note` | Appends text to today's daily note (uses `obsidian-daily-notes-interface`) |
 | `list_sessions` | List active sessions with client info and per-session tool stats |
 
 All tools enforce security rules before returning data. All tools have usage statistics tracked via `StatsTracker`.
@@ -70,7 +77,8 @@ All tools enforce security rules before returning data. All tools have usage sta
 
 - `@modelcontextprotocol/sdk` — MCP protocol implementation
 - `obsidian-daily-notes-interface` — Integration with Obsidian's Daily Notes feature
-- `zod` — Schema validation for MCP tool parameters
+- `zod` (v4) — Schema validation for MCP tool parameters
+- `express` (v5) — HTTP server
 - `moment` — Used via `window.moment` (provided by Obsidian runtime, not bundled)
 
 ## Build System
@@ -85,7 +93,7 @@ esbuild configured in `esbuild.config.mjs`:
 - Jest with `ts-jest` preset, node environment
 - Tests in `tests/**/*.test.ts`
 - Obsidian module is mocked via `tests/__mocks__/obsidian.ts` (stubs for `Plugin`, `Notice`, `TFile`, `TFolder`, `CachedMetadata`)
-- Run a single test: `npx jest tests/main.test.ts`
+- Run a single test: `pnpm jest tests/main.test.ts`
 
 ## Dogfooding
 
@@ -139,5 +147,5 @@ curl -s http://127.0.0.1:27123/mcp \
 - Auth token is a 16-byte hex string generated via Node's `crypto.randomBytes`
 - Settings + stats are persisted via Obsidian's `loadData()`/`saveData()` in `{ settings, toolStats }` format
 - Security rules reload automatically when settings are saved
-- Each tool file exports a `register*` function taking `(mcp, plugin, tracker)`
+- Each tool file exports a `register*` function taking `(mcp, plugin, tracker, logger)`
 - Stats are tracked via `StatsTracker.track()` wrapper — no manual recording needed in tool handlers

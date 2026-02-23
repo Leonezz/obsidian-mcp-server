@@ -14,7 +14,7 @@ const outputSchema = {
     createdAt: z.string(),
     modifiedAt: z.string(),
     sizeBytes: z.number(),
-    frontmatter: z.record(z.unknown()),
+    frontmatter: z.record(z.string(), z.unknown()),
     tags: z.array(z.string()),
     headings: z.array(z.object({ level: z.number(), heading: z.string() })),
     links: z.array(z.string()),

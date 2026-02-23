@@ -26,7 +26,7 @@ export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin, tracker: 
             start_date: z.string().optional().describe('ISO date string (YYYY-MM-DD). Filter notes modified after this date.'),
             end_date: z.string().optional().describe('ISO date string. Filter notes modified before this date.'),
             tags: z.array(z.string()).optional().describe("List of tags to filter by (e.g. ['#work'])"),
-            frontmatter: z.record(z.string()).optional().describe("Filter by frontmatter fields (e.g. {\"status\": \"draft\", \"priority\": \"high\"}). All fields must match (AND logic)."),
+            frontmatter: z.record(z.string(), z.string()).optional().describe("Filter by frontmatter fields (e.g. {\"status\": \"draft\", \"priority\": \"high\"}). All fields must match (AND logic)."),
         },
     }, tracker.track('search_notes', async ({ start_date, end_date, tags, frontmatter }) => {
         let files = plugin.app.vault.getFiles();

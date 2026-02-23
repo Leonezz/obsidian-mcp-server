@@ -9,11 +9,12 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 ## Features
 
 *   **Context Awareness:** `get_active_file` lets the agent see exactly what you are working on.
-*   **Vault Access:** `read_note`, `get_note_metadata`, and `describe_vault` provide full vault visibility.
-*   **Note Management:** `create_note`, `edit_note`, and `delete_note` allow agents to manage your notes.
-*   **Search:** `search_notes` filters by date/tags; `search_content` does full-text search with line-number snippets.
+*   **Vault Access:** `read_note`, `get_note_metadata`, `get_backlinks`, and `describe_vault` provide full vault visibility.
+*   **Note Management:** `create_note`, `edit_note`, `append_note`, `patch_note`, `rename_note`, and `delete_note` allow agents to manage your notes.
+*   **Attachment Handling:** `read_attachment` returns images as MCP ImageContent (AI can see them); `add_attachment` saves binary files to the vault.
+*   **Search:** `search_notes` filters by date/tags/frontmatter; `search_content` does full-text or regex search with line-number snippets and optional metadata.
 *   **Quick Capture:** `append_daily_note` works with your Daily Notes settings (creates/appends correctly).
-*   **Discovery:** `list_folder`, `list_all_tags`, and `list_recent_notes` help agents explore the vault.
+*   **Discovery:** `list_folder` (with sorting, filtering, recursion), `list_all_tags`, `list_recent_notes`, and `create_folder` help agents explore and organize the vault.
 *   **Session Tracking:** `list_sessions` shows active connections with client name/version and per-session tool usage stats.
 *   **Usage Statistics:** Track tool call counts (total/successful/failed) in Settings, with persistent storage.
 *   **Secure:** Uses a local **Auth Token** with timing-safe comparison. Authentication can be disabled for local development.
@@ -29,20 +30,27 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 
 | Tool | Description |
 |------|-------------|
-| `get_active_file` | Returns content + metadata of the currently open note |
-| `read_note` | Reads a specific note by vault-relative path |
-| `append_daily_note` | Appends text to today's daily note |
-| `list_folder` | Lists files/folders in a directory |
-| `list_all_tags` | Lists all tags in the vault with usage counts |
-| `search_notes` | Filters notes by date range and/or tags (max 100 results) |
-| `describe_vault` | Vault overview: name, file/folder counts, total size, file type breakdown, tag count |
-| `create_note` | Create a new note at a given path (prevents overwriting) |
+| `get_active_file` | Get the content and metadata of the currently active note |
+| `read_note` | Read a note by vault-relative path |
+| `create_note` | Create a new note at a given path (auto-creates parent folders, prevents overwriting) |
 | `edit_note` | Replace entire content of an existing note |
+| `append_note` | Append or prepend text to an existing note |
+| `patch_note` | Find-and-replace edit on a note (no full rewrite needed) |
+| `rename_note` | Rename or move a note (Obsidian auto-updates wikilinks) |
 | `delete_note` | Delete a note by path |
+| `read_attachment` | Read a binary attachment — images returned as ImageContent (AI can see them) |
+| `add_attachment` | Save a base64-encoded file to the vault (respects Obsidian's attachment folder setting) |
 | `get_note_metadata` | Get frontmatter, tags, headings, links without full content |
+| `get_backlinks` | Get incoming links (backlinks) to a note |
+| `list_folder` | List files/folders with sorting, file type filtering, and recursive listing |
+| `list_all_tags` | List all hashtags in the vault with usage counts |
 | `list_recent_notes` | Most recently modified notes, sorted newest-first (default 10, max 50) |
-| `search_content` | Case-insensitive full-text search with line-number snippets (max 50 results) |
-| `list_sessions` | List active sessions with client info and per-session tool usage stats |
+| `create_folder` | Create a folder (with intermediate parents, like `mkdir -p`) |
+| `search_notes` | Filter notes by date range, tags, and/or frontmatter fields |
+| `search_content` | Full-text or regex search with line-number snippets, optional folder scope and metadata |
+| `describe_vault` | Vault overview: name, file/folder counts, total size, file type breakdown, tag count |
+| `append_daily_note` | Append text to today's daily note |
+| `list_sessions` | List active MCP sessions with client info and per-session tool stats |
 
 All tools enforce access control rules before returning data.
 

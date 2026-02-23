@@ -11,7 +11,7 @@ const outputSchema = {
     fileCount: z.number(),
     folderCount: z.number(),
     totalSizeBytes: z.number(),
-    fileTypes: z.record(z.number()),
+    fileTypes: z.record(z.string(), z.number()),
     tagCount: z.number(),
 };
 

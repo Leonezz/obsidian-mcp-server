@@ -13,7 +13,7 @@ const outputSchema = {
             line: z.number(),
             text: z.string(),
         })),
-        frontmatter: z.record(z.unknown()).optional(),
+        frontmatter: z.record(z.string(), z.unknown()).optional(),
         tags: z.array(z.string()).optional(),
     })),
     truncated: z.boolean(),
