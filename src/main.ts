@@ -16,6 +16,7 @@ export default class McpPlugin extends Plugin {
   private subscriptionManager!: ResourceSubscriptionManager;
 
   async onload(): Promise<void> {
+    console.log("[MCP] Plugin loading");
     await this.loadSettings();
 
     if (!this.settings.authToken) {
@@ -44,6 +45,7 @@ export default class McpPlugin extends Plugin {
   }
 
   async onunload(): Promise<void> {
+    console.log("[MCP] Plugin unloading");
     await this.statsTracker.flush();
     this.subscriptionManager.stop();
     this.mcpServer.stop();

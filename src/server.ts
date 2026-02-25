@@ -94,6 +94,7 @@ export class McpHttpServer {
       this.cleanupInterval = null;
     }
 
+    const sessionCount = this.sessions.size;
     for (const [, session] of this.sessions) {
       session.transport.close().catch(() => {
         /* intentionally ignored */
@@ -104,6 +105,7 @@ export class McpHttpServer {
     if (this.httpServer) {
       this.httpServer.close();
       this.httpServer = null;
+      console.log(`[MCP] Server stopped (closed ${sessionCount} session(s))`);
     }
   }
 
@@ -116,7 +118,8 @@ export class McpHttpServer {
       app.use(this.createAuthMiddleware());
 
       app.all("/mcp", (req: Request, res: Response) => {
-        this.handleMcpRequest(req, res).catch(() => {
+        this.handleMcpRequest(req, res).catch((err) => {
+          console.error("[MCP] Request handling error:", err);
           if (!res.headersSent) {
             res.status(500).json({ error: "Internal server error." });
           }
@@ -134,19 +137,27 @@ export class McpHttpServer {
 
       const port = this.plugin.settings.port;
       const host = this.plugin.settings.listenAddress;
+      const authStatus = this.plugin.settings.requireAuth
+        ? "auth enabled"
+        : "auth disabled";
+      console.log(`[MCP] Starting server on ${host}:${port} (${authStatus})`);
       this.httpServer = app.listen(port, host, () => {
         const label = host === "0.0.0.0" ? `0.0.0.0:${port}` : `Port ${port}`;
         new Notice(`MCP Server Online (${label})`);
+        console.log(`[MCP] Server listening on ${host}:${port}`);
       });
 
       this.httpServer.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE") {
+          console.error(`[MCP] Port ${port} is already in use`);
           new Notice(`MCP Error: Port ${port} busy`);
         } else {
+          console.error(`[MCP] Server error: ${err.message}`);
           new Notice(`MCP Server Error: ${err.message}`);
         }
       });
-    } catch {
+    } catch (err) {
+      console.error("[MCP] Failed to start server:", err);
       new Notice("MCP Server Failed to Start");
     }
   }
@@ -156,6 +167,9 @@ export class McpHttpServer {
       const now = Date.now();
       for (const [id, session] of this.sessions) {
         if (now - session.lastAccess > SESSION_TTL_MS) {
+          console.log(
+            `[MCP] Session expired: ${session.clientName} (${id.slice(-8)})`,
+          );
           session.transport.close().catch(() => {
             /* intentionally ignored */
           });
@@ -176,6 +190,9 @@ export class McpHttpServer {
     }
     if (oldestId) {
       const session = this.sessions.get(oldestId)!;
+      console.log(
+        `[MCP] Evicting oldest session: ${session.clientName} (${oldestId.slice(-8)})`,
+      );
       session.transport.close().catch(() => {
         /* intentionally ignored */
       });
@@ -209,6 +226,7 @@ export class McpHttpServer {
       }
 
       if (!clientToken || clientToken.length === 0) {
+        console.warn("[MCP] Auth rejected: no token provided");
         res.status(403).json({ error: "Unauthorized." });
         return;
       }
@@ -219,6 +237,7 @@ export class McpHttpServer {
         serverBuf.length !== clientBuf.length ||
         !crypto.timingSafeEqual(serverBuf, clientBuf)
       ) {
+        console.warn("[MCP] Auth rejected: invalid token");
         res.status(403).json({ error: "Unauthorized." });
         return;
       }
@@ -332,6 +351,10 @@ export class McpHttpServer {
           clientVersion,
           toolStats: {},
         });
+        const versionLabel = clientVersion ? ` v${clientVersion}` : "";
+        console.log(
+          `[MCP] Session created: ${clientName}${versionLabel} (${id.slice(-8)})`,
+        );
       },
     });
 
@@ -355,6 +378,9 @@ export class McpHttpServer {
 
     transport.onclose = () => {
       if (transport.sessionId) {
+        console.log(
+          `[MCP] Session closed: ${clientName} (${transport.sessionId.slice(-8)})`,
+        );
         this.sessions.delete(transport.sessionId);
       }
       if (this.subscriptionManager) {
