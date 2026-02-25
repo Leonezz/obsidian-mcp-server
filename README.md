@@ -58,7 +58,7 @@ All tools enforce access control rules before returning data.
 
 ### Method 1: BRAT (Beta)
 1.  Install **BRAT** from Community Plugins.
-2.  Add Beta Plugin: `zhuwenq/obsidian-mcp-server`
+2.  Add Beta Plugin: `Leonezz/obsidian-mcp-server`
 3.  Enable "Obsidian MCP Server".
 
 ## Configuration
