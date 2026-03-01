@@ -157,6 +157,26 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
+### OpenClaw
+
+OpenClaw does not yet support MCP natively. Use the bundled **OpenClaw skill** instead, which teaches the agent to communicate with the server via `curl` and `jq`.
+
+**Install the skill:**
+
+```bash
+cp -r openclaw-skill/ ~/.openclaw/workspace/skills/obsidian-mcp/
+```
+
+**Set the auth token:**
+
+```bash
+export OBSIDIAN_MCP_TOKEN="YOUR_TOKEN"
+```
+
+Optionally set `OBSIDIAN_MCP_PORT` (default `27123`) and `OBSIDIAN_MCP_HOST` (default `127.0.0.1`).
+
+Once installed, OpenClaw will automatically discover the skill and can read, search, create, and edit notes in your vault.
+
 ### Other Clients
 
 Any MCP client that supports Streamable HTTP can connect using:
