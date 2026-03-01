@@ -6,7 +6,7 @@ export function registerStaticResources(mcp: McpServer, plugin: McpPlugin): void
     mcp.registerResource('vault-overview', 'obsidian://vault/overview', {
         description: 'Overview of the Obsidian vault: name, file counts, folder structure, and tag summary.',
         mimeType: 'application/json',
-    }, async () => {
+    }, () => {
         const allFiles = plugin.app.vault.getFiles();
         const files = allFiles.filter(f => plugin.security.isAllowed(f));
 

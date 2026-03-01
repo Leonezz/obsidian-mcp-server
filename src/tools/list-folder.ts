@@ -32,7 +32,7 @@ function collectChildren(
             type: isFolder ? 'folder' as const : 'file' as const,
         });
         if (recursive && isFolder && currentDepth < maxDepth) {
-            items.push(...collectChildren(child as TFolder, security, recursive, maxDepth, currentDepth + 1));
+            items.push(...collectChildren(child, security, recursive, maxDepth, currentDepth + 1));
         }
     }
     return items;
@@ -51,7 +51,7 @@ export function registerListFolder(mcp: McpServer, plugin: McpPlugin, tracker: S
             recursive: z.boolean().default(false).describe('List contents of subdirectories recursively'),
             depth: z.number().int().min(1).optional().describe('Max recursion depth (only when recursive=true). Default: unlimited.'),
         },
-    }, tracker.track('list_folder', async ({ path, sort_by, sort_order, file_types, recursive, depth }) => {
+    }, tracker.track('list_folder', ({ path, sort_by, sort_order, file_types, recursive, depth }) => {
         if (!plugin.security.isAllowed(path)) {
             logger.warning('list_folder: access denied', { path });
             return { content: [{ type: 'text' as const, text: ACCESS_DENIED_MSG }], isError: true };

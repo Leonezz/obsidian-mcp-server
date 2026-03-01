@@ -1,7 +1,7 @@
 import { TFile } from 'obsidian';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import moment from 'moment';
+import { moment } from 'obsidian';
 import { getTagsFromCache } from '../utils';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
@@ -28,7 +28,7 @@ export function registerGetNoteMetadata(mcp: McpServer, plugin: McpPlugin, track
         inputSchema: {
             path: z.string().describe("Vault-relative path (e.g. 'Notes/Meeting.md')"),
         },
-    }, tracker.track('get_note_metadata', async ({ path }) => {
+    }, tracker.track('get_note_metadata', ({ path }) => {
         if (!plugin.security.isAllowed(path)) {
             logger.warning('get_note_metadata: access denied', { path });
             return { content: [{ type: 'text' as const, text: ACCESS_DENIED_MSG }], isError: true };

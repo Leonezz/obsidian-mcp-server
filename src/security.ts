@@ -1,10 +1,10 @@
-import { TFile, CachedMetadata } from 'obsidian';
+import { AbstractFile, TFile, CachedMetadata } from 'obsidian';
 import { normalizePath, getTagsFromCache } from './utils';
 
 interface SecurityPluginRef {
     settings: { blacklist: string };
     app: {
-        vault: { getAbstractFileByPath(path: string): any };
+        vault: { getAbstractFileByPath(path: string): AbstractFile | null };
         metadataCache: { getFileCache(file: TFile): CachedMetadata | null };
     };
 }
@@ -39,9 +39,9 @@ export class SecurityManager {
         if (typeof fileOrPath === 'string') {
             path = fileOrPath;
             const abstractFile = this.plugin.app.vault.getAbstractFileByPath(path);
-            if (abstractFile && 'stat' in abstractFile) {
+            if (abstractFile instanceof TFile) {
                 path = abstractFile.path;
-                const cache = this.plugin.app.metadataCache.getFileCache(abstractFile as TFile);
+                const cache = this.plugin.app.metadataCache.getFileCache(abstractFile);
                 tags = getTagsFromCache(cache);
             }
         } else {

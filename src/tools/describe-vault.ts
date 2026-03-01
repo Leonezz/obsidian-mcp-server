@@ -20,7 +20,7 @@ export function registerDescribeVault(mcp: McpServer, plugin: McpPlugin, tracker
         description: 'Get an overview of the vault: name, file/folder counts, total size, file type breakdown, and tag count.',
         annotations: READ_ONLY_ANNOTATIONS,
         outputSchema,
-    }, tracker.track('describe_vault', async () => {
+    }, tracker.track('describe_vault', () => {
         const allFiles = plugin.app.vault.getFiles();
         const files = allFiles.filter(f => plugin.security.isAllowed(f));
 

@@ -1,6 +1,6 @@
 import { TFile, TFolder } from 'obsidian';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
-import moment from 'moment';
+import { moment } from 'obsidian';
 import { getTagsFromCache } from '../utils';
 import type McpPlugin from '../main';
 
@@ -11,7 +11,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
     mcp.registerResource(
         'note',
         new ResourceTemplate('obsidian://notes/{path}', {
-            list: async () => {
+            list: () => {
                 const files = plugin.app.vault.getFiles()
                     .filter(f => f.extension === 'md' && plugin.security.isAllowed(f))
                     .slice(0, maxListed);
@@ -24,7 +24,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
                 };
             },
             complete: {
-                path: async (value) => {
+                path: (value) => {
                     const files = plugin.app.vault.getFiles()
                         .filter(f => f.extension === 'md' && plugin.security.isAllowed(f))
                         .filter(f => f.path.toLowerCase().startsWith(value.toLowerCase()))
@@ -64,7 +64,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
     mcp.registerResource(
         'tag',
         new ResourceTemplate('obsidian://tags/{tag}', {
-            list: async () => {
+            list: () => {
                 // @ts-expect-error getTags() exists on metadataCache but not in type defs
                 const tags: Record<string, number> = plugin.app.metadataCache.getTags();
                 const allowed = Object.keys(tags)
@@ -79,7 +79,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
                 };
             },
             complete: {
-                tag: async (value) => {
+                tag: (value) => {
                     // @ts-expect-error getTags() exists on metadataCache but not in type defs
                     const tags: Record<string, number> = plugin.app.metadataCache.getTags();
                     return Object.keys(tags)
@@ -93,7 +93,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
             description: 'List notes that have a specific tag.',
             mimeType: 'application/json',
         },
-        async (_uri, variables) => {
+        (_uri, variables) => {
             const tag = decodeURIComponent(String(variables.tag));
             if (!plugin.security.isTagAllowed(tag)) {
                 return { contents: [{ uri: _uri.href, text: 'Access denied.' }] };
@@ -129,7 +129,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
         new ResourceTemplate('obsidian://daily/{date}', {
             list: undefined,
             complete: {
-                date: async () => {
+                date: () => {
                     const today = moment();
                     return Array.from({ length: 7 }, (_, i) =>
                         today.clone().subtract(i, 'days').format('YYYY-MM-DD'),
@@ -173,7 +173,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
     mcp.registerResource(
         'folder',
         new ResourceTemplate('obsidian://folders/{path}', {
-            list: async () => {
+            list: () => {
                 const root = plugin.app.vault.getRoot();
                 const folders: string[] = [];
                 const collectFolders = (folder: TFolder): void => {
@@ -194,7 +194,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
                 };
             },
             complete: {
-                path: async (value) => {
+                path: (value) => {
                     const root = plugin.app.vault.getRoot();
                     const folders: string[] = [];
                     const collectFolders = (folder: TFolder): void => {
@@ -216,7 +216,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
             description: 'List files and subfolders in a vault folder.',
             mimeType: 'application/json',
         },
-        async (_uri, variables) => {
+        (_uri, variables) => {
             const path = decodeURIComponent(String(variables.path));
             if (!plugin.security.isAllowed(path)) {
                 return { contents: [{ uri: _uri.href, text: 'Access denied.' }] };

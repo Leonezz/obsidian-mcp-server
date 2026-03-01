@@ -14,11 +14,11 @@ export class McpSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Obsidian MCP Server" });
+    new Setting(containerEl).setName("Obsidian MCP Server").setHeading();
 
     // --- Server Section ---
     new Setting(containerEl)
-      .setName("Server Port")
+      .setName("Server port")
       .setDesc(
         "Port to listen on (1024-65535). Default: 27123. Server restarts on change.",
       )
@@ -38,7 +38,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Listen Address")
+      .setName("Listen address")
       .setDesc(
         'Network interface to bind. "127.0.0.1" = local only. "0.0.0.0" = all interfaces (LAN-accessible). Server restarts on change.',
       )
@@ -49,14 +49,7 @@ export class McpSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.listenAddress)
           .onChange(async (value) => {
             if (value === "0.0.0.0") {
-              const confirmed = window.confirm(
-                "Binding to 0.0.0.0 exposes your vault to all devices on your local network. " +
-                  "Make sure authentication is enabled. Continue?",
-              );
-              if (!confirmed) {
-                dropdown.setValue("127.0.0.1");
-                return;
-              }
+              new Notice("Binding to 0.0.0.0 — ensure authentication is enabled");
             }
             this.plugin.settings.listenAddress = value;
             await this.plugin.saveSettings();
@@ -65,7 +58,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Require Authentication")
+      .setName("Require authentication")
       .setDesc(
         "Require Bearer token for all connections. Disable for easier local development.",
       )
@@ -74,13 +67,7 @@ export class McpSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.requireAuth)
           .onChange(async (value) => {
             if (!value) {
-              const confirmed = window.confirm(
-                "Disabling auth allows any local process to access your vault via the MCP server. Continue?",
-              );
-              if (!confirmed) {
-                toggle.setValue(true);
-                return;
-              }
+              new Notice("Authentication disabled — any local process can access your vault");
             }
             this.plugin.settings.requireAuth = value;
             await this.plugin.saveSettings();
@@ -91,7 +78,7 @@ export class McpSettingTab extends PluginSettingTab {
 
     if (this.plugin.settings.requireAuth) {
       new Setting(containerEl)
-        .setName("Auth Token")
+        .setName("Auth token")
         .setDesc(
           "Required for connecting. Use the Authorization header: Bearer <token>",
         )
@@ -100,12 +87,12 @@ export class McpSettingTab extends PluginSettingTab {
         )
         .addExtraButton((btn) =>
           btn.setIcon("copy").onClick(() => {
-            navigator.clipboard.writeText(this.plugin.settings.authToken);
+            void navigator.clipboard.writeText(this.plugin.settings.authToken);
             new Notice("Token copied");
           }),
         );
 
-      new Setting(containerEl).setName("Regenerate Token").addButton((btn) =>
+      new Setting(containerEl).setName("Regenerate token").addButton((btn) =>
         btn
           .setButtonText("Regenerate")
           .setWarning()
@@ -121,7 +108,7 @@ export class McpSettingTab extends PluginSettingTab {
     }
 
     new Setting(containerEl)
-      .setName("Access Control: Blacklist")
+      .setName("Access control: blacklist")
       .setDesc(
         'One rule per line. Paths: "Secret/" blocks folders/files. Tags: "#secret" blocks files with that tag.',
       )
@@ -136,10 +123,10 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     // --- Agent Instructions Section ---
-    containerEl.createEl("h3", { text: "Agent Instructions" });
+    new Setting(containerEl).setName("Agent instructions").setHeading();
 
     new Setting(containerEl)
-      .setName("Enable Instructions")
+      .setName("Enable instructions")
       .setDesc(
         "Send vault context and usage guidelines to AI agents on connect. Server restarts on change.",
       )
@@ -154,7 +141,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Include Vault Structure")
+      .setName("Include vault structure")
       .setDesc("Include top-level folder names in instructions.")
       .addToggle((toggle) =>
         toggle
@@ -167,7 +154,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Custom Instructions")
+      .setName("Custom instructions")
       .setDesc(
         "Additional instructions appended to the agent context. Server restarts on change.",
       )
@@ -185,10 +172,10 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     // --- Prompts Section ---
-    containerEl.createEl("h3", { text: "Format Guides (Prompts)" });
+    new Setting(containerEl).setName("Format guides (prompts)").setHeading();
 
     new Setting(containerEl)
-      .setName("Enable Prompts")
+      .setName("Enable prompts")
       .setDesc(
         "Expose Obsidian format reference guides as MCP prompts. Server restarts on change.",
       )
@@ -203,7 +190,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Obsidian Markdown Guide")
+      .setName("Obsidian Markdown guide")
       .setDesc("Wikilinks, embeds, callouts, frontmatter, tags.")
       .addToggle((toggle) =>
         toggle
@@ -216,7 +203,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("JSON Canvas Guide")
+      .setName("JSON Canvas guide")
       .setDesc(".canvas file format reference.")
       .addToggle((toggle) =>
         toggle
@@ -229,7 +216,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Obsidian Bases Guide")
+      .setName("Obsidian Bases guide")
       .setDesc(".base file format reference.")
       .addToggle((toggle) =>
         toggle
@@ -242,10 +229,10 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     // --- Resources Section ---
-    containerEl.createEl("h3", { text: "Resources" });
+    new Setting(containerEl).setName("Resources").setHeading();
 
     new Setting(containerEl)
-      .setName("Enable Resources")
+      .setName("Enable resources")
       .setDesc(
         "Expose vault content as MCP resources (notes, tags, folders, daily notes). Server restarts on change.",
       )
@@ -260,7 +247,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Enable Resource Subscriptions")
+      .setName("Enable resource subscriptions")
       .setDesc(
         "Notify connected AI agents when vault files change. Requires plugin restart.",
       )
@@ -274,7 +261,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Max Resources Listed")
+      .setName("Max resources listed")
       .setDesc(
         "Maximum number of resources returned in list operations (1-5000).",
       )
@@ -290,10 +277,10 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     // --- Smart Features Section ---
-    containerEl.createEl("h3", { text: "Smart Features" });
+    new Setting(containerEl).setName("Smart features").setHeading();
 
     new Setting(containerEl)
-      .setName("Smart Annotations")
+      .setName("Smart annotations")
       .setDesc(
         "Add contextual hints to read_note/get_active_file responses (draft status, large note warnings, broken links).",
       )
@@ -314,7 +301,7 @@ export class McpSettingTab extends PluginSettingTab {
   }
 
   private renderSessionsSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "Active Sessions" });
+    new Setting(containerEl).setName("Active sessions").setHeading();
 
     const summaries = this.plugin.mcpServer.getSessionSummaries();
 
@@ -361,7 +348,7 @@ export class McpSettingTab extends PluginSettingTab {
   }
 
   private renderStatsSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "Tool Usage Statistics" });
+    new Setting(containerEl).setName("Tool usage statistics").setHeading();
 
     const stats = this.plugin.toolStats;
     const toolNames = Object.keys(stats);
@@ -392,7 +379,7 @@ export class McpSettingTab extends PluginSettingTab {
     }
 
     new Setting(containerEl)
-      .setName("Reset Statistics")
+      .setName("Reset statistics")
       .setDesc("Clear all tool usage statistics.")
       .addButton((btn) =>
         btn

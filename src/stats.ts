@@ -34,7 +34,7 @@ export class StatsTracker {
         this.onToolResult = callback;
     }
 
-    track<T, A extends unknown[]>(toolName: string, handler: (...args: A) => Promise<T>): (...args: A) => Promise<T> {
+    track<T, A extends unknown[]>(toolName: string, handler: (...args: A) => T | Promise<T>): (...args: A) => Promise<T> {
         return async (...args: A) => {
             this.setStats(recordToolCall(this.getStats(), toolName));
             // MCP SDK passes (args, extra) when inputSchema is defined,
@@ -59,11 +59,11 @@ export class StatsTracker {
     private scheduleSave(): void {
         this.dirty = true;
         if (this.debounceTimer) return;
-        this.debounceTimer = setTimeout(async () => {
+        this.debounceTimer = setTimeout(() => {
             this.debounceTimer = null;
             if (this.dirty) {
                 this.dirty = false;
-                await this.persist();
+                void this.persist();
             }
         }, STATS_SAVE_DEBOUNCE_MS);
     }

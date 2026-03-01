@@ -26,7 +26,7 @@ export function registerDeleteNote(mcp: McpServer, plugin: McpPlugin, tracker: S
             logger.warning('delete_note: access denied by tag rule', { path });
             return { content: [{ type: 'text', text: ACCESS_DENIED_MSG }], isError: true };
         }
-        await plugin.app.vault.delete(file);
+        await plugin.app.fileManager.trashFile(file);
         return { content: [{ type: 'text', text: `Deleted ${path}` }] };
     }));
 }

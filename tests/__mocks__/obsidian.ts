@@ -1,3 +1,11 @@
+// Re-export moment from the moment package (mirrors Obsidian's runtime behavior)
+export { default as moment } from 'moment';
+
+export class AbstractFile {
+    path: string = '';
+    name: string = '';
+}
+
 export class Plugin {
     app: any;
     constructor(app: any, manifest: any) {
@@ -44,6 +52,7 @@ export class App {}
 export class Setting {
     constructor(_el: any) {}
     setName(_name: string) { return this; }
+    setHeading() { return this; }
     setDesc(_desc: string) { return this; }
     addText(_cb: any) { return this; }
     addTextArea(_cb: any) { return this; }

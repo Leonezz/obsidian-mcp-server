@@ -9,7 +9,7 @@ export function registerListSessions(mcp: McpServer, plugin: McpPlugin, tracker:
         description: 'List active MCP sessions with client info and per-session tool usage stats.',
         annotations: READ_ONLY_ANNOTATIONS,
         inputSchema: {},
-    }, tracker.track('list_sessions', async () => {
+    }, tracker.track('list_sessions', () => {
         const summaries = plugin.mcpServer.getSessionSummaries();
         logger.info('list_sessions', { count: summaries.length });
         return {

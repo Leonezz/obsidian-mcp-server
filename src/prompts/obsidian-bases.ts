@@ -132,7 +132,7 @@ export function registerBasesGuide(mcp: McpServer): void {
     mcp.registerPrompt('obsidian-bases-guide', {
         title: 'Obsidian Bases Format',
         description: 'Reference guide for Obsidian Bases (.base) file format including filters, formulas, views, and summaries.',
-    }, async () => ({
+    }, () => ({
         messages: [{
             role: 'user',
             content: { type: 'text', text: OBSIDIAN_BASES_GUIDE },

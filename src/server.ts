@@ -15,8 +15,7 @@ import type { ResourceSubscriptionManager } from "./resources/subscriptions";
 import type { ToolUsageStats, SessionSummary } from "./types";
 import { recordToolCall, recordToolSuccess, recordToolFailure } from "./stats";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const PKG_VERSION: string = require("../package.json").version;
+import packageJson from "../package.json";
 
 const MAX_CLIENT_STRING_LENGTH = 128;
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -105,7 +104,7 @@ export class McpHttpServer {
     if (this.httpServer) {
       this.httpServer.close();
       this.httpServer = null;
-      console.log(`[MCP] Server stopped (closed ${sessionCount} session(s))`);
+      console.debug(`[MCP] Server stopped (closed ${sessionCount} session(s))`);
     }
   }
 
@@ -140,11 +139,11 @@ export class McpHttpServer {
       const authStatus = this.plugin.settings.requireAuth
         ? "auth enabled"
         : "auth disabled";
-      console.log(`[MCP] Starting server on ${host}:${port} (${authStatus})`);
+      console.debug(`[MCP] Starting server on ${host}:${port} (${authStatus})`);
       this.httpServer = app.listen(port, host, () => {
         const label = host === "0.0.0.0" ? `0.0.0.0:${port}` : `Port ${port}`;
         new Notice(`MCP Server Online (${label})`);
-        console.log(`[MCP] Server listening on ${host}:${port}`);
+        console.debug(`[MCP] Server listening on ${host}:${port}`);
       });
 
       this.httpServer.on("error", (err: NodeJS.ErrnoException) => {
@@ -167,7 +166,7 @@ export class McpHttpServer {
       const now = Date.now();
       for (const [id, session] of this.sessions) {
         if (now - session.lastAccess > SESSION_TTL_MS) {
-          console.log(
+          console.debug(
             `[MCP] Session expired: ${session.clientName} (${id.slice(-8)})`,
           );
           session.transport.close().catch(() => {
@@ -189,8 +188,9 @@ export class McpHttpServer {
       }
     }
     if (oldestId) {
-      const session = this.sessions.get(oldestId)!;
-      console.log(
+      const session = this.sessions.get(oldestId);
+      if (!session) return;
+      console.debug(
         `[MCP] Evicting oldest session: ${session.clientName} (${oldestId.slice(-8)})`,
       );
       session.transport.close().catch(() => {
@@ -259,7 +259,8 @@ export class McpHttpServer {
     // Route GET/DELETE to existing sessions
     if (req.method === "GET" || req.method === "DELETE") {
       if (sessionId && this.sessions.has(sessionId)) {
-        const session = this.sessions.get(sessionId)!;
+        const session = this.sessions.get(sessionId);
+        if (!session) return;
         session.lastAccess = Date.now();
         await session.transport.handleRequest(req, res, req.body);
         return;
@@ -280,7 +281,8 @@ export class McpHttpServer {
 
     // Route POST to existing session
     if (sessionId && this.sessions.has(sessionId)) {
-      const session = this.sessions.get(sessionId)!;
+      const session = this.sessions.get(sessionId);
+      if (!session) return;
       session.lastAccess = Date.now();
       await session.transport.handleRequest(req, res, req.body);
       return;
@@ -352,7 +354,7 @@ export class McpHttpServer {
           toolStats: {},
         });
         const versionLabel = clientVersion ? ` v${clientVersion}` : "";
-        console.log(
+        console.debug(
           `[MCP] Session created: ${clientName}${versionLabel} (${id.slice(-8)})`,
         );
       },
@@ -362,7 +364,7 @@ export class McpHttpServer {
     const mcp = new McpServer(
       {
         name: "Obsidian MCP",
-        version: PKG_VERSION,
+        version: packageJson.version,
       },
       instructions ? { instructions } : undefined,
     );
@@ -378,7 +380,7 @@ export class McpHttpServer {
 
     transport.onclose = () => {
       if (transport.sessionId) {
-        console.log(
+        console.debug(
           `[MCP] Session closed: ${clientName} (${transport.sessionId.slice(-8)})`,
         );
         this.sessions.delete(transport.sessionId);

@@ -101,7 +101,7 @@ export function registerCanvasGuide(mcp: McpServer): void {
     mcp.registerPrompt('json-canvas-guide', {
         title: 'JSON Canvas Format',
         description: 'Reference guide for Obsidian JSON Canvas (.canvas) file format including node types, edges, and structure.',
-    }, async () => ({
+    }, () => ({
         messages: [{
             role: 'user',
             content: { type: 'text', text: JSON_CANVAS_GUIDE },

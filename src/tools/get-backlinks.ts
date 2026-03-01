@@ -46,7 +46,7 @@ export function registerGetBacklinks(mcp: McpServer, plugin: McpPlugin, tracker:
 
         for (const [sourcePath, targets] of Object.entries(resolvedLinks)) {
             if (backlinks.length >= MAX_BACKLINKS) break;
-            if (!(path in (targets as Record<string, number>))) continue;
+            if (!(path in targets)) continue;
             if (!plugin.security.isAllowed(sourcePath)) continue;
 
             const sourceFile = plugin.app.vault.getAbstractFileByPath(sourcePath);

@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import moment from 'moment';
+import { moment } from 'obsidian';
 import { getTagsFromCache } from '../utils';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
@@ -28,7 +28,7 @@ export function registerSearchNotes(mcp: McpServer, plugin: McpPlugin, tracker: 
             tags: z.array(z.string()).optional().describe("List of tags to filter by (e.g. ['#work'])"),
             frontmatter: z.record(z.string(), z.string()).optional().describe("Filter by frontmatter fields (e.g. {\"status\": \"draft\", \"priority\": \"high\"}). All fields must match (AND logic)."),
         },
-    }, tracker.track('search_notes', async ({ start_date, end_date, tags, frontmatter }) => {
+    }, tracker.track('search_notes', ({ start_date, end_date, tags, frontmatter }) => {
         let files = plugin.app.vault.getFiles();
         files = files.filter(f => plugin.security.isAllowed(f));
 

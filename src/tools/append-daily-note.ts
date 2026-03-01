@@ -2,7 +2,7 @@ import { TFile } from 'obsidian';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getDailyNote, createDailyNote, getAllDailyNotes } from 'obsidian-daily-notes-interface';
-import moment from 'moment';
+import { moment } from 'obsidian';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import type { McpLogger } from '../logging';

@@ -14,7 +14,7 @@ export function registerListAllTags(mcp: McpServer, plugin: McpPlugin, tracker: 
         description: 'List all hashtags used in the vault with their usage count.',
         annotations: READ_ONLY_ANNOTATIONS,
         outputSchema,
-    }, tracker.track('list_all_tags', async () => {
+    }, tracker.track('list_all_tags', () => {
         // @ts-expect-error getTags() exists on metadataCache but not in type defs
         const tags: Record<string, number> = plugin.app.metadataCache.getTags();
         const filteredTags: Record<string, number> = {};

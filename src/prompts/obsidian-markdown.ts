@@ -100,7 +100,7 @@ export function registerMarkdownGuide(mcp: McpServer): void {
     mcp.registerPrompt('obsidian-markdown-guide', {
         title: 'Obsidian Flavored Markdown',
         description: 'Reference guide for Obsidian Markdown syntax including wikilinks, embeds, callouts, frontmatter, tags, and properties.',
-    }, async () => ({
+    }, () => ({
         messages: [{
             role: 'user',
             content: { type: 'text', text: OBSIDIAN_MARKDOWN_GUIDE },

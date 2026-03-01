@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import moment from 'moment';
+import { moment } from 'obsidian';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import type { McpLogger } from '../logging';
@@ -24,7 +24,7 @@ export function registerListRecentNotes(mcp: McpServer, plugin: McpPlugin, track
             count: z.number().int().min(1).max(MAX_RECENT_NOTES).default(10)
                 .describe(`Number of recent notes to return (default: 10, max: ${MAX_RECENT_NOTES})`),
         },
-    }, tracker.track('list_recent_notes', async ({ count }) => {
+    }, tracker.track('list_recent_notes', ({ count }) => {
         const files = plugin.app.vault.getFiles()
             .filter(f => f.extension === 'md' && plugin.security.isAllowed(f));
 
