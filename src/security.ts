@@ -1,10 +1,10 @@
-import { AbstractFile, TFile, CachedMetadata } from 'obsidian';
+import { TAbstractFile, TFile, CachedMetadata } from 'obsidian';
 import { normalizePath, getTagsFromCache } from './utils';
 
 interface SecurityPluginRef {
     settings: { blacklist: string };
     app: {
-        vault: { getAbstractFileByPath(path: string): AbstractFile | null };
+        vault: { getAbstractFileByPath(path: string): TAbstractFile | null };
         metadataCache: { getFileCache(file: TFile): CachedMetadata | null };
     };
 }

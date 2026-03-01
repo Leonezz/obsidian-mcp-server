@@ -1,7 +1,7 @@
 // Re-export moment from the moment package (mirrors Obsidian's runtime behavior)
 export { default as moment } from 'moment';
 
-export class AbstractFile {
+export class TAbstractFile {
     path: string = '';
     name: string = '';
 }

@@ -14,7 +14,7 @@ export class McpSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    new Setting(containerEl).setName("Obsidian MCP Server").setHeading();
+    new Setting(containerEl).setName("Server").setHeading();
 
     // --- Server Section ---
     new Setting(containerEl)
@@ -40,7 +40,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Listen address")
       .setDesc(
-        'Network interface to bind. "127.0.0.1" = local only. "0.0.0.0" = all interfaces (LAN-accessible). Server restarts on change.',
+        'Network interface to bind (127.0.0.1 = local only, 0.0.0.0 = all interfaces); server restarts on change.',
       )
       .addDropdown((dropdown) =>
         dropdown
@@ -60,7 +60,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Require authentication")
       .setDesc(
-        "Require Bearer token for all connections. Disable for easier local development.",
+        "Require bearer token for all connections; disable for easier local development.",
       )
       .addToggle((toggle) =>
         toggle
@@ -110,7 +110,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Access control: blacklist")
       .setDesc(
-        'One rule per line. Paths: "Secret/" blocks folders/files. Tags: "#secret" blocks files with that tag.',
+        'One rule per line; paths like "Secret/" block folders, tags like "#secret" block by tag.',
       )
       .addTextArea((text) =>
         text
@@ -161,7 +161,7 @@ export class McpSettingTab extends PluginSettingTab {
       .addTextArea((text) =>
         text
           .setPlaceholder(
-            "e.g., Always use #project tag when creating notes...",
+            "e.g., always use #project tag when creating notes...",
           )
           .setValue(this.plugin.settings.customInstructions)
           .onChange(async (value) => {
@@ -177,7 +177,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Enable prompts")
       .setDesc(
-        "Expose Obsidian format reference guides as MCP prompts. Server restarts on change.",
+        "Expose Obsidian format reference guides as MCP prompts; server restarts on change.",
       )
       .addToggle((toggle) =>
         toggle
@@ -203,7 +203,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("JSON Canvas guide")
+      .setName("JSON canvas guide")
       .setDesc(".canvas file format reference.")
       .addToggle((toggle) =>
         toggle
@@ -216,7 +216,7 @@ export class McpSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Obsidian Bases guide")
+      .setName("Obsidian bases guide")
       .setDesc(".base file format reference.")
       .addToggle((toggle) =>
         toggle
@@ -234,7 +234,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Enable resources")
       .setDesc(
-        "Expose vault content as MCP resources (notes, tags, folders, daily notes). Server restarts on change.",
+        "Expose vault content as MCP resources (notes, tags, folders, daily notes); server restarts on change.",
       )
       .addToggle((toggle) =>
         toggle
@@ -319,8 +319,8 @@ export class McpSettingTab extends PluginSettingTab {
     headerRow.createEl("th", { text: "Client" });
     headerRow.createEl("th", { text: "Session ID" });
     headerRow.createEl("th", { text: "Connected" });
-    headerRow.createEl("th", { text: "Last Active" });
-    headerRow.createEl("th", { text: "Tool Calls" });
+    headerRow.createEl("th", { text: "Last active" });
+    headerRow.createEl("th", { text: "Tool calls" });
 
     const tbody = table.createEl("tbody");
     for (const s of summaries) {

@@ -157,7 +157,7 @@ export class McpHttpServer {
       });
     } catch (err) {
       console.error("[MCP] Failed to start server:", err);
-      new Notice("MCP Server Failed to Start");
+      new Notice("MCP server failed to start");
     }
   }
 

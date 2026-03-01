@@ -38,8 +38,8 @@ export function registerAddAttachment(mcp: McpServer, plugin: McpPlugin, tracker
             }
             targetPath = `${folder}/${filename}`;
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- undocumented Obsidian API
-            targetPath = (plugin.app as any).fileManager.getAvailablePathForAttachment(filename);
+            // @ts-expect-error getAvailablePathForAttachment is an undocumented Obsidian API
+            targetPath = plugin.app.fileManager.getAvailablePathForAttachment(filename);
         }
         if (!plugin.security.isAllowed(targetPath)) {
             logger.warning('add_attachment: target path access denied', { targetPath });
