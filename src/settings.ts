@@ -110,7 +110,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Access control: blacklist")
       .setDesc(
-        'One rule per line; paths like "Secret/" block folders, tags like "#secret" block by tag.',
+        'One rule per line; paths like "secret/" block folders, tags like "#secret" block by tag.',
       )
       .addTextArea((text) =>
         text
@@ -161,7 +161,7 @@ export class McpSettingTab extends PluginSettingTab {
       .addTextArea((text) =>
         text
           .setPlaceholder(
-            "e.g., always use #project tag when creating notes...",
+            "Example: always use #project tag when creating notes",
           )
           .setValue(this.plugin.settings.customInstructions)
           .onChange(async (value) => {
@@ -177,7 +177,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Enable prompts")
       .setDesc(
-        "Expose Obsidian format reference guides as MCP prompts; server restarts on change.",
+        "Expose Obsidian format reference guides as prompts; server restarts on change.",
       )
       .addToggle((toggle) =>
         toggle
@@ -234,7 +234,7 @@ export class McpSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Enable resources")
       .setDesc(
-        "Expose vault content as MCP resources (notes, tags, folders, daily notes); server restarts on change.",
+        "Expose vault content as resources (notes, tags, folders, daily notes); server restarts on change.",
       )
       .addToggle((toggle) =>
         toggle
