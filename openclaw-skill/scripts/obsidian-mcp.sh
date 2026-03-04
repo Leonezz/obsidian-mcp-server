@@ -8,7 +8,7 @@
 #   obsidian-mcp.sh tools                    # List available tools
 #
 # Environment variables:
-#   OBSIDIAN_MCP_TOKEN  (required)  Bearer token from Obsidian plugin settings
+#   OBSIDIAN_MCP_TOKEN  (optional)  Bearer token from Obsidian plugin settings (only if auth is enabled)
 #   OBSIDIAN_MCP_HOST   (optional)  Server host (default: 127.0.0.1)
 #   OBSIDIAN_MCP_PORT   (optional)  Server port (default: 27123)
 #
@@ -34,7 +34,10 @@ check_deps() {
 }
 
 check_token() {
-  [[ -n "${OBSIDIAN_MCP_TOKEN:-}" ]] || die "OBSIDIAN_MCP_TOKEN is not set. Get it from Obsidian Settings > Obsidian MCP Server."
+  if [[ -z "${OBSIDIAN_MCP_TOKEN:-}" ]]; then
+    echo "Note: OBSIDIAN_MCP_TOKEN is not set. Connecting without authentication." >&2
+    echo "If the server requires auth, set OBSIDIAN_MCP_TOKEN from Obsidian Settings > Obsidian MCP Server." >&2
+  fi
 }
 
 next_id() {
@@ -59,8 +62,10 @@ rpc() {
 
   local -a headers=(
     -H "Content-Type: application/json"
-    -H "Authorization: Bearer ${OBSIDIAN_MCP_TOKEN}"
   )
+  if [[ -n "${OBSIDIAN_MCP_TOKEN:-}" ]]; then
+    headers+=(-H "Authorization: Bearer ${OBSIDIAN_MCP_TOKEN}")
+  fi
   if [[ -n "$session" ]]; then
     headers+=(-H "mcp-session-id: ${session}")
   fi
@@ -87,7 +92,7 @@ rpc() {
 
   case "$http_code" in
     200|202) ;;
-    401) die "Authentication failed. Check your OBSIDIAN_MCP_TOKEN." ;;
+    403) die "Authentication failed. Check your OBSIDIAN_MCP_TOKEN." ;;
     404)
       # Session expired — caller can retry
       rm -f "$SESSION_FILE"
@@ -258,7 +263,7 @@ case "${1:-}" in
     echo "  tools                    List available tools"
     echo ""
     echo "Environment:"
-    echo "  OBSIDIAN_MCP_TOKEN  (required)  Auth token from Obsidian settings"
+    echo "  OBSIDIAN_MCP_TOKEN  (optional)  Auth token from Obsidian settings (if auth enabled)"
     echo "  OBSIDIAN_MCP_HOST   (optional)  Server host (default: 127.0.0.1)"
     echo "  OBSIDIAN_MCP_PORT   (optional)  Server port (default: 27123)"
     exit 1

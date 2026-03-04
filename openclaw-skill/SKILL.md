@@ -4,12 +4,9 @@ description: Read, search, create, and edit notes in your Obsidian vault via the
 metadata:
   openclaw:
     requires:
-      env:
-        - OBSIDIAN_MCP_TOKEN
       bins:
         - curl
         - jq
-    primaryEnv: OBSIDIAN_MCP_TOKEN
 ---
 
 # Obsidian MCP Skill
@@ -22,7 +19,7 @@ You have access to the user's **Obsidian vault** via the Obsidian MCP Server plu
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OBSIDIAN_MCP_TOKEN` | Yes | — | Bearer token from Obsidian Settings > Obsidian MCP Server |
+| `OBSIDIAN_MCP_TOKEN` | No | — | Bearer token from Obsidian Settings > Obsidian MCP Server. Only needed if authentication is enabled. |
 | `OBSIDIAN_MCP_PORT` | No | `27123` | Server port |
 | `OBSIDIAN_MCP_HOST` | No | `127.0.0.1` | Server host |
 
@@ -329,7 +326,7 @@ Append text to today's daily note. Creates the note if it doesn't exist.
 
 | Error | Meaning | Action |
 |-------|---------|--------|
-| HTTP 401 | Invalid or missing token | Check `OBSIDIAN_MCP_TOKEN` |
+| HTTP 403 | Invalid or missing token | Check `OBSIDIAN_MCP_TOKEN` (only if auth is enabled in Obsidian settings) |
 | HTTP 404 | Session expired or server restarted | Script auto-retries with a new session |
 | Connection refused | Obsidian not running or plugin disabled | Start Obsidian and enable the plugin |
 | Tool error in response | Invalid parameters or access denied | Check parameters and access control rules |
