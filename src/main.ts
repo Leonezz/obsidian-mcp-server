@@ -52,14 +52,14 @@ export default class McpPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const raw = (await this.loadData()) ?? {};
+    const raw = ((await this.loadData()) ?? {}) as Record<string, unknown>;
 
     // Backward-compatible: detect old format (flat settings) vs new { settings, toolStats }
     if ("settings" in raw && typeof raw.settings === "object") {
-      this.settings = { ...DEFAULT_SETTINGS, ...raw.settings };
-      this.toolStats = raw.toolStats ?? {};
+      this.settings = { ...DEFAULT_SETTINGS, ...(raw.settings as Partial<McpPluginSettings>) };
+      this.toolStats = (raw.toolStats as ToolUsageStats | undefined) ?? {};
     } else {
-      this.settings = { ...DEFAULT_SETTINGS, ...raw };
+      this.settings = { ...DEFAULT_SETTINGS, ...(raw as Partial<McpPluginSettings>) };
       this.toolStats = {};
     }
 

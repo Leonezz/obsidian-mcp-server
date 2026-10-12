@@ -1,10 +1,10 @@
 {
   "id": "mcp-server",
   "name": "MCP Server",
-  "version": "1.1.7",
-  "minAppVersion": "0.15.0",
+  "version": "1.1.8",
+  "minAppVersion": "1.6.6",
   "description": "Expose your vault to AI agents via Model Context Protocol (MCP).",
-	"author": "zhuwenq <zhuwenqa@outlook.com>",
+	"author": "zhuwenq",
 	"authorUrl": "https://github.com/Leonezz",
 	"fundingUrl": {
 		"Buy Me a Coffee": "https://buymeacoffee.com/zhuwenqa",

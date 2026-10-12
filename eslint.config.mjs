@@ -1,37 +1,34 @@
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
 import obsidianmd from 'eslint-plugin-obsidianmd';
 
-export default tseslint.config(
-    eslint.configs.recommended,
-    ...tseslint.configs.recommended,
+// Mirrors the Obsidian community directory scanner (obsidianmd recommended,
+// which already includes eslint + typescript-eslint type-checked rules).
+export default defineConfig([
+    ...obsidianmd.configs.recommended,
     {
-        plugins: { obsidianmd },
-        rules: {
-            '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-            '@typescript-eslint/no-explicit-any': 'off', // Obsidian API often needs any
-            '@typescript-eslint/ban-ts-comment': 'off',
-            ...obsidianmd.configs.recommended,
-            // Disable rules that require typed linting (parserOptions.project)
-            'obsidianmd/no-tfile-tfolder-cast': 'off',
-            'obsidianmd/prefer-file-manager-trash-file': 'off',
-        },
-    },
-    {
-        // Enable type-aware rules only for src files
-        files: ['src/**/*.ts'],
         languageOptions: {
             parserOptions: {
-                projectService: true,
+                projectService: {
+                    allowDefaultProject: ['eslint.config.mjs', 'esbuild.config.mjs', 'jest.config.js'],
+                },
                 tsconfigRootDir: import.meta.dirname,
             },
         },
+    },
+    {
+        files: ['**/*.ts'],
         rules: {
-            'obsidianmd/no-tfile-tfolder-cast': 'error',
-            'obsidianmd/prefer-file-manager-trash-file': 'warn',
+            '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
         },
     },
     {
-        ignores: ['main.js', 'node_modules/**', 'tests/**'],
+        files: ['package.json'],
+        rules: {
+            // moment is provided by the Obsidian runtime; the devDependency only supplies types + test shim.
+            'depend/ban-dependencies': ['error', { allowed: ['moment'] }],
+        },
     },
-);
+    {
+        ignores: ['main.js', 'node_modules/**', 'tests/**', 'openclaw-skill/**', 'docs/**'],
+    },
+]);

@@ -1,4 +1,4 @@
-import { CachedMetadata } from 'obsidian';
+import { CachedMetadata, MetadataCache } from 'obsidian';
 
 const MIME_TYPES: Record<string, string> = {
     png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
@@ -33,11 +33,20 @@ export function getTagsFromCache(cache: CachedMetadata | null): string[] {
     if (!cache) return [];
     const tagSet = new Set<string>();
     cache.tags?.forEach(t => tagSet.add(t.tag));
-    const fmTags = cache.frontmatter?.tags;
+    const fmTags: unknown = cache.frontmatter?.tags;
     if (Array.isArray(fmTags)) {
         fmTags.forEach(t => tagSet.add('#' + String(t)));
     } else if (typeof fmTags === 'string') {
         fmTags.split(',').forEach(t => tagSet.add('#' + t.trim()));
     }
     return Array.from(tagSet);
+}
+
+/** `MetadataCache.getTags()` exists at runtime but is missing from the public type defs. */
+interface MetadataCacheWithTags {
+    getTags(): Record<string, number>;
+}
+
+export function getVaultTags(metadataCache: MetadataCache): Record<string, number> {
+    return (metadataCache as unknown as MetadataCacheWithTags).getTags();
 }

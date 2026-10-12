@@ -5,6 +5,7 @@ import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import type { McpLogger } from '../logging';
 import { READ_ONLY_ANNOTATIONS } from './constants';
+import { getVaultTags } from '../utils';
 
 const outputSchema = {
     name: z.string(),
@@ -43,8 +44,7 @@ export function registerDescribeVault(mcp: McpServer, plugin: McpPlugin, tracker
         };
         countFolders(plugin.app.vault.getRoot());
 
-        // @ts-expect-error getTags() exists on metadataCache but not in type defs
-        const tags: Record<string, number> = plugin.app.metadataCache.getTags();
+        const tags = getVaultTags(plugin.app.metadataCache);
         const tagCount = Object.keys(tags).filter(t => plugin.security.isTagAllowed(t)).length;
 
         const overview = {

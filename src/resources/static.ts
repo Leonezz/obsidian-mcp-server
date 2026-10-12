@@ -1,6 +1,7 @@
 import { TFolder } from 'obsidian';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type McpPlugin from '../main';
+import { getVaultTags } from '../utils';
 
 export function registerStaticResources(mcp: McpServer, plugin: McpPlugin): void {
     mcp.registerResource('vault-overview', 'obsidian://vault/overview', {
@@ -24,8 +25,7 @@ export function registerStaticResources(mcp: McpServer, plugin: McpPlugin): void
             .map(f => f.name)
             .sort();
 
-        // @ts-expect-error getTags() exists on metadataCache but not in type defs
-        const tags: Record<string, number> = plugin.app.metadataCache.getTags();
+        const tags = getVaultTags(plugin.app.metadataCache);
         const tagCount = Object.keys(tags).filter(t => plugin.security.isTagAllowed(t)).length;
 
         const overview = {

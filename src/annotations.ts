@@ -19,7 +19,7 @@ export function generateNoteAnnotations(plugin: McpPlugin, file: TFile, content:
     const cache = plugin.app.metadataCache.getFileCache(file);
 
     // Draft status detection
-    const status = cache?.frontmatter?.status;
+    const status: unknown = cache?.frontmatter?.status;
     if (typeof status === 'string' && status.toLowerCase() === 'draft') {
         annotations.push({
             type: 'text',

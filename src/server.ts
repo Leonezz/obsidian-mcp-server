@@ -35,7 +35,7 @@ interface ActiveSession {
 export class McpHttpServer {
   private httpServer: http.Server | null = null;
   private sessions = new Map<string, ActiveSession>();
-  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private cleanupInterval: number | null = null;
   private subscriptionManager: ResourceSubscriptionManager | null = null;
 
   constructor(private plugin: McpPlugin) {}
@@ -89,7 +89,7 @@ export class McpHttpServer {
 
   stop(): void {
     if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
+      window.clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
 
@@ -162,7 +162,7 @@ export class McpHttpServer {
   }
 
   private startSessionCleanup(): void {
-    this.cleanupInterval = setInterval(() => {
+    this.cleanupInterval = window.setInterval(() => {
       const now = Date.now();
       for (const [id, session] of this.sessions) {
         if (now - session.lastAccess > SESSION_TTL_MS) {
@@ -322,12 +322,13 @@ export class McpHttpServer {
 
     // Extract client info from initialize request
     const clientNameHeader = req.headers["x-client-name"] as string | undefined;
-    const initBody = Array.isArray(req.body)
-      ? req.body.find((msg: Record<string, unknown>) =>
-          isInitializeRequest(msg),
-        )
-      : req.body;
-    const clientInfo = (initBody?.params as Record<string, unknown>)
+    const body: unknown = req.body;
+    const initBody = (
+      Array.isArray(body)
+        ? body.find((msg: unknown) => isInitializeRequest(msg))
+        : body
+    ) as { params?: Record<string, unknown> } | undefined;
+    const clientInfo = initBody?.params
       ?.clientInfo as { name?: string; version?: string } | undefined;
     const rawName = clientNameHeader || clientInfo?.name || "Unknown";
     const rawVersion = clientInfo?.version || "";

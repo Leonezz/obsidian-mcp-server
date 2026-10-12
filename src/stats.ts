@@ -20,7 +20,7 @@ export function recordToolFailure(stats: ToolUsageStats, toolName: string): Tool
 
 export class StatsTracker {
     private dirty = false;
-    private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private debounceTimer: number | null = null;
 
     private onToolResult: ((sessionId: string, toolName: string, success: boolean) => void) | null = null;
 
@@ -59,7 +59,7 @@ export class StatsTracker {
     private scheduleSave(): void {
         this.dirty = true;
         if (this.debounceTimer) return;
-        this.debounceTimer = setTimeout(() => {
+        this.debounceTimer = window.setTimeout(() => {
             this.debounceTimer = null;
             if (this.dirty) {
                 this.dirty = false;
@@ -70,7 +70,7 @@ export class StatsTracker {
 
     async flush(): Promise<void> {
         if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
+            window.clearTimeout(this.debounceTimer);
             this.debounceTimer = null;
         }
         if (this.dirty) {

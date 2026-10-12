@@ -4,7 +4,7 @@ import type McpPlugin from "./main";
 
 export class McpSettingTab extends PluginSettingTab {
   private plugin: McpPlugin;
-  private portRestartTimeout: ReturnType<typeof setTimeout> | null = null;
+  private portRestartTimeout: number | null = null;
 
   constructor(app: App, plugin: McpPlugin) {
     super(app, plugin);
@@ -30,8 +30,8 @@ export class McpSettingTab extends PluginSettingTab {
             if (isNaN(port) || port < 1024 || port > 65535) return;
             this.plugin.settings.port = port;
             await this.plugin.saveSettings();
-            if (this.portRestartTimeout) clearTimeout(this.portRestartTimeout);
-            this.portRestartTimeout = setTimeout(() => {
+            if (this.portRestartTimeout) window.clearTimeout(this.portRestartTimeout);
+            this.portRestartTimeout = window.setTimeout(() => {
               this.plugin.restartServer();
             }, 1000);
           }),

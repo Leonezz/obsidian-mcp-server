@@ -4,6 +4,7 @@ import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
 import type { McpLogger } from '../logging';
 import { READ_ONLY_ANNOTATIONS } from './constants';
+import { getVaultTags } from '../utils';
 
 const outputSchema = {
     tags: z.record(z.string(), z.number()),
@@ -15,8 +16,7 @@ export function registerListAllTags(mcp: McpServer, plugin: McpPlugin, tracker: 
         annotations: READ_ONLY_ANNOTATIONS,
         outputSchema,
     }, tracker.track('list_all_tags', () => {
-        // @ts-expect-error getTags() exists on metadataCache but not in type defs
-        const tags: Record<string, number> = plugin.app.metadataCache.getTags();
+        const tags = getVaultTags(plugin.app.metadataCache);
         const filteredTags: Record<string, number> = {};
         for (const t in tags) {
             if (plugin.security.isTagAllowed(t)) {

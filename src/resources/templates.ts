@@ -1,7 +1,7 @@
 import { TFile, TFolder } from 'obsidian';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { moment } from 'obsidian';
-import { getTagsFromCache } from '../utils';
+import { getTagsFromCache, getVaultTags } from '../utils';
 import type McpPlugin from '../main';
 
 export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): void {
@@ -65,8 +65,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
         'tag',
         new ResourceTemplate('obsidian://tags/{tag}', {
             list: () => {
-                // @ts-expect-error getTags() exists on metadataCache but not in type defs
-                const tags: Record<string, number> = plugin.app.metadataCache.getTags();
+                const tags = getVaultTags(plugin.app.metadataCache);
                 const allowed = Object.keys(tags)
                     .filter(t => plugin.security.isTagAllowed(t))
                     .slice(0, maxListed);
@@ -80,8 +79,7 @@ export function registerTemplateResources(mcp: McpServer, plugin: McpPlugin): vo
             },
             complete: {
                 tag: (value) => {
-                    // @ts-expect-error getTags() exists on metadataCache but not in type defs
-                    const tags: Record<string, number> = plugin.app.metadataCache.getTags();
+                    const tags = getVaultTags(plugin.app.metadataCache);
                     return Object.keys(tags)
                         .filter(t => plugin.security.isTagAllowed(t))
                         .filter(t => t.toLowerCase().startsWith(value.toLowerCase()))
