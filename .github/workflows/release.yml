@@ -15,6 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Verify tag matches manifest version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION=$(node -p "require('./manifest.json').version")
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag '$TAG' does not match manifest.json version '$VERSION'. Obsidian requires the tag to equal the version exactly (no 'v' prefix)."
+            exit 1
+          fi
+
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
