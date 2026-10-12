@@ -1,0 +1,13 @@
+# pnpm 11+ reads allowBuilds; pnpm 10 reads onlyBuiltDependencies.
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver
+
+overrides:
+  # 10.7.4 is newer than pnpm's default minimumReleaseAge (24h), which makes
+  # frozen installs on recent pnpm fail; drop once it has aged past that window.
+  ip-address: 10.7.3

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-mcp-server",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Expose Obsidian to AI Agents via Model Context Protocol (MCP)",
   "main": "main.js",
   "scripts": {
@@ -39,15 +39,6 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "express": "^5.3.0",
     "obsidian-daily-notes-interface": "^0.9.5",
-    "zod": "^4.6.7"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ],
-    "overrides": {
-      "obsidian-daily-notes-interface>obsidian": "1.14.4"
-    }
+    "zod": "^4.6.5"
   }
 }
