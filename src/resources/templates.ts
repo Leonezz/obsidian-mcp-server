@@ -1,6 +1,6 @@
 import { TFile, TFolder } from 'obsidian';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { moment } from 'obsidian';
+import { moment } from '../moment';
 import { getTagsFromCache, getVaultTags } from '../utils';
 import type McpPlugin from '../main';
 

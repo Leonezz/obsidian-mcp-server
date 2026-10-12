@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { moment } from 'obsidian';
+import { moment } from '../moment';
 import { getTagsFromCache } from '../utils';
 import type McpPlugin from '../main';
 import type { StatsTracker } from '../stats';
