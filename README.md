@@ -54,6 +54,8 @@ This plugin runs a local **Model Context Protocol (MCP)** server inside Obsidian
 
 All tools enforce access control rules before returning data.
 
+`append_daily_note` checks the destination before creating a missing note or its folders. With tag-based blacklist rules and a daily-note template, automatic creation is refused because rendered tags cannot be safely checked before indexing. Create the note in Obsidian first and wait for indexing before retrying. Restricted templates are not read or copied.
+
 ## Installation
 
 ### Method 1: BRAT (Beta)

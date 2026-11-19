@@ -28,6 +28,10 @@ export class SecurityManager {
         this.tagRules = lines.filter(x => x.startsWith('#'));
     }
 
+    hasTagRules(): boolean {
+        return this.tagRules.length > 0;
+    }
+
     isTagAllowed(tag: string): boolean {
         return !this.tagRules.some(rule => tag.startsWith(rule));
     }
